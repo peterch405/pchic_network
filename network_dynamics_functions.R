@@ -1,6 +1,6 @@
-library(igraph)
-library(tcltk2)
-library(Sushi)
+# library(igraph)
+# library(tcltk2)
+# library(Sushi)
 
 #'Isolate naive or primed network from merged by edge origin attribute
 #'
@@ -303,17 +303,10 @@ add_subnet <- function(network, np_summary, all_subgraphs){
     net_row <- which(np_summary$.id == net)
     #if net only contains a node and no edges
     #will correspond to vertices with trans interactions which have been removed
-    # if(length(net_row) == 0){ 
-    #   # print(vcount(all_subgraphs[[net]]), ecount(all_subgraphs[[net]]))
-    #   single_nodes <- single_nodes +1
-    # }else{
+
     select_v <- V(network)$name %in% V(all_subgraphs[[net]])$name
-    # V(network)$dist_orig_sign[select_v] <- np_summary$dist_orig_sign[net_row]
-    # V(network)$subnet[select_v] <- np_summary$.id[net_row]
     dist_orig_sign_vector[select_v] <- np_summary$dist_orig_sign[net_row]
     subnet_vector[select_v] <- np_summary$.id[net_row]
-    # }
-    #progress bar
     info <- sprintf("%d%% done", (round(net/length(all_subgraphs)*100)))
     setTkProgressBar(pb, net, sprintf("Adding subnet ID (%s)", info), info)
   }
@@ -463,8 +456,6 @@ plot_subnetwork_sushi <- function(primed_bedpe, naive_bedpe, hg38_chrom_sizes,
     chromend         <- hg38_chrom[chrom]$size  #181538259
   } 
   
-  # pdf("/media/chovanec/My_Passport/CHiC_naive_primed/network/network_analysis/2301_changing_sushi_2^20.pdf", 
-  #width=10, height=5)
   
   # cat(chrom, chromstart, chromend)
   if(!is.na(out_path)){
@@ -510,103 +501,103 @@ plot_subnetwork_sushi <- function(primed_bedpe, naive_bedpe, hg38_chrom_sizes,
 #' Plot subnetwork using the karyotype package
 #' 
 #' 
-plot_subnetwork <- function(subnet, hindiii_lookup, long_range=2^20, long_only=FALSE, 
-                            use_zoom=FALSE, protein_genes=NA, rna_genes=NA, title=""){
-  
-  n_links_subnet <- get_link_coord(subnet, hindiii_lookup, "primed")
-  p_links_subnet <- get_link_coord(subnet, hindiii_lookup, "naive")
-  
-  n_links_subnet_long <- get_link_coord(subnet, hindiii_lookup, "primed", long_range)
-  p_links_subnet_long <- get_link_coord(subnet, hindiii_lookup, "naive", long_range)
-  
-  n_starts <- makeGRangesFromDataFrame(n_links_subnet[[1]])
-  n_ends <- makeGRangesFromDataFrame(n_links_subnet[[2]])
-  
-  p_starts <- makeGRangesFromDataFrame(p_links_subnet[[1]])
-  p_ends <- makeGRangesFromDataFrame(p_links_subnet[[2]])
-  
-  if(nrow(n_links_subnet_long[[1]]) > 0){
-    n_starts_long <- makeGRangesFromDataFrame(n_links_subnet_long[[1]])
-    n_ends_long <- makeGRangesFromDataFrame(n_links_subnet_long[[2]])
-    no_n_long <- FALSE
-  }else{
-    no_n_long <- TRUE
-  }
-  if(nrow(p_links_subnet_long[[1]]) > 0){
-    p_starts_long <- makeGRangesFromDataFrame(p_links_subnet_long[[1]])
-    p_ends_long <- makeGRangesFromDataFrame(p_links_subnet_long[[2]])
-    no_p_long <- FALSE
-  }else{
-    no_p_long <- TRUE
-  }
-  
-  chrom <- levels(seqnames(n_starts))
-  
-  stopifnot(chrom == levels(seqnames(p_starts))) #test both n and p same chr
-  
-  #zoom in on region +/-5kb otherwise whole chromosome ploted
-  zoom_start = min(c(start(n_starts), start(p_starts), start(n_ends), start(p_ends)))-5000
-  zoom_end = max(c(end(n_starts), end(p_starts), end(n_ends), end(p_ends)))+5000
-  zoom_gr <- GRanges(seqnames = chrom, strand = "*", 
-                     ranges = IRanges(start=zoom_start, width=zoom_end-zoom_start))
-  
-  pp <- karyoploteR::getDefaultPlotParams(plot.type = 2)
-  pp$data1height <- 50
-  pp$data2height <- 100
-  pp$ideogramheight <- 10
-  if(use_zoom){
-    kp <- karyoploteR::plotKaryotype(chromosomes=c(chrom), plot.params = pp, 
-                                     plot.type = 2, cex=0.6, zoom = zoom_gr , 
-                                     main=title) 
-  }else{
-    kp <- karyoploteR::plotKaryotype(chromosomes=c(chrom), plot.params = pp, 
-                                     plot.type = 2, cex=0.6, main=title) 
-  }
-  
-  if(!is.na(protein_genes[1])){
-    karyoploteR::kpPlotMarkers(kp, data=protein_genes, labels=protein_genes$gene_name, 
-                               data.panel = 2, r0=0, r1=0.1, cex=0.5, 
-                               adjust.label.position = FALSE)
-    r0_pos = 0.5
-    r1_pos = 1
-  }
-  if(!is.na(rna_genes[1])){
-    karyoploteR::kpPlotMarkers(kp, data=rna_genes, labels=rna_genes$gene_name, 
-                               data.panel = 2, r0=0, r1=0.1, cex=0.5, 
-                               adjust.label.position = FALSE,
-                  label.color = "grey")
-    r0_pos = 0.5
-    r1_pos = 1
-  }
-  
-  if(is.na(protein_genes[1]) & is.na(rna_genes[1])){
-    r0_pos = 0
-    r1_pos = 0.5
-  }
-  
-  
-  #links
-  if(long_only & !no_p_long){
-    karyoploteR::kpPlotLinks(kp, data=p_starts_long, data2=p_ends_long, col="#FF2B2B", 
-                             data.panel=2, r0=r0_pos, r1=r1_pos, lwd=0.3)
-  }else if(long_only & !no_n_long){
-    karyoploteR::kpPlotLinks(kp, data=n_starts_long, data2=n_ends_long, col="#3B85F5", 
-                             data.panel=1, r0=0, r1=1, lwd=0.3)
-  }else{
-    karyoploteR::kpPlotLinks(kp, data=n_starts, data2=n_ends, col="#DBDBDB", 
-                             data.panel=1, r0=0, r1=1, lwd=0.1)
-    karyoploteR::kpPlotLinks(kp, data=p_starts, data2=p_ends, col="#DBDBDB", 
-                             data.panel=2, r0=r0_pos, r1=r1_pos, lwd=0.1)
-    if(!no_p_long){
-      karyoploteR::kpPlotLinks(kp, data=p_starts_long, data2=p_ends_long, col="#FF2B2B", 
-                               data.panel=2, r0=r0_pos, r1=r1_pos, lwd=0.3)
-    }
-    if(!no_n_long){
-      karyoploteR::kpPlotLinks(kp, data=n_starts_long, data2=n_ends_long, col="#3B85F5", 
-                               data.panel=1, r0=0, r1=1, lwd=0.3)
-    }
-  }
-}
+# plot_subnetwork <- function(subnet, hindiii_lookup, long_range=2^20, long_only=FALSE, 
+#                             use_zoom=FALSE, protein_genes=NA, rna_genes=NA, title=""){
+#   
+#   n_links_subnet <- get_link_coord(subnet, hindiii_lookup, "primed")
+#   p_links_subnet <- get_link_coord(subnet, hindiii_lookup, "naive")
+#   
+#   n_links_subnet_long <- get_link_coord(subnet, hindiii_lookup, "primed", long_range)
+#   p_links_subnet_long <- get_link_coord(subnet, hindiii_lookup, "naive", long_range)
+#   
+#   n_starts <- makeGRangesFromDataFrame(n_links_subnet[[1]])
+#   n_ends <- makeGRangesFromDataFrame(n_links_subnet[[2]])
+#   
+#   p_starts <- makeGRangesFromDataFrame(p_links_subnet[[1]])
+#   p_ends <- makeGRangesFromDataFrame(p_links_subnet[[2]])
+#   
+#   if(nrow(n_links_subnet_long[[1]]) > 0){
+#     n_starts_long <- makeGRangesFromDataFrame(n_links_subnet_long[[1]])
+#     n_ends_long <- makeGRangesFromDataFrame(n_links_subnet_long[[2]])
+#     no_n_long <- FALSE
+#   }else{
+#     no_n_long <- TRUE
+#   }
+#   if(nrow(p_links_subnet_long[[1]]) > 0){
+#     p_starts_long <- makeGRangesFromDataFrame(p_links_subnet_long[[1]])
+#     p_ends_long <- makeGRangesFromDataFrame(p_links_subnet_long[[2]])
+#     no_p_long <- FALSE
+#   }else{
+#     no_p_long <- TRUE
+#   }
+#   
+#   chrom <- levels(seqnames(n_starts))
+#   
+#   stopifnot(chrom == levels(seqnames(p_starts))) #test both n and p same chr
+#   
+#   #zoom in on region +/-5kb otherwise whole chromosome ploted
+#   zoom_start = min(c(start(n_starts), start(p_starts), start(n_ends), start(p_ends)))-5000
+#   zoom_end = max(c(end(n_starts), end(p_starts), end(n_ends), end(p_ends)))+5000
+#   zoom_gr <- GRanges(seqnames = chrom, strand = "*", 
+#                      ranges = IRanges(start=zoom_start, width=zoom_end-zoom_start))
+#   
+#   pp <- karyoploteR::getDefaultPlotParams(plot.type = 2)
+#   pp$data1height <- 50
+#   pp$data2height <- 100
+#   pp$ideogramheight <- 10
+#   if(use_zoom){
+#     kp <- karyoploteR::plotKaryotype(chromosomes=c(chrom), plot.params = pp, 
+#                                      plot.type = 2, cex=0.6, zoom = zoom_gr , 
+#                                      main=title) 
+#   }else{
+#     kp <- karyoploteR::plotKaryotype(chromosomes=c(chrom), plot.params = pp, 
+#                                      plot.type = 2, cex=0.6, main=title) 
+#   }
+#   
+#   if(!is.na(protein_genes[1])){
+#     karyoploteR::kpPlotMarkers(kp, data=protein_genes, labels=protein_genes$gene_name, 
+#                                data.panel = 2, r0=0, r1=0.1, cex=0.5, 
+#                                adjust.label.position = FALSE)
+#     r0_pos = 0.5
+#     r1_pos = 1
+#   }
+#   if(!is.na(rna_genes[1])){
+#     karyoploteR::kpPlotMarkers(kp, data=rna_genes, labels=rna_genes$gene_name, 
+#                                data.panel = 2, r0=0, r1=0.1, cex=0.5, 
+#                                adjust.label.position = FALSE,
+#                   label.color = "grey")
+#     r0_pos = 0.5
+#     r1_pos = 1
+#   }
+#   
+#   if(is.na(protein_genes[1]) & is.na(rna_genes[1])){
+#     r0_pos = 0
+#     r1_pos = 0.5
+#   }
+#   
+#   
+#   #links
+#   if(long_only & !no_p_long){
+#     karyoploteR::kpPlotLinks(kp, data=p_starts_long, data2=p_ends_long, col="#FF2B2B", 
+#                              data.panel=2, r0=r0_pos, r1=r1_pos, lwd=0.3)
+#   }else if(long_only & !no_n_long){
+#     karyoploteR::kpPlotLinks(kp, data=n_starts_long, data2=n_ends_long, col="#3B85F5", 
+#                              data.panel=1, r0=0, r1=1, lwd=0.3)
+#   }else{
+#     karyoploteR::kpPlotLinks(kp, data=n_starts, data2=n_ends, col="#DBDBDB", 
+#                              data.panel=1, r0=0, r1=1, lwd=0.1)
+#     karyoploteR::kpPlotLinks(kp, data=p_starts, data2=p_ends, col="#DBDBDB", 
+#                              data.panel=2, r0=r0_pos, r1=r1_pos, lwd=0.1)
+#     if(!no_p_long){
+#       karyoploteR::kpPlotLinks(kp, data=p_starts_long, data2=p_ends_long, col="#FF2B2B", 
+#                                data.panel=2, r0=r0_pos, r1=r1_pos, lwd=0.3)
+#     }
+#     if(!no_n_long){
+#       karyoploteR::kpPlotLinks(kp, data=n_starts_long, data2=n_ends_long, col="#3B85F5", 
+#                                data.panel=1, r0=0, r1=1, lwd=0.3)
+#     }
+#   }
+# }
 
 
 
@@ -615,6 +606,15 @@ plot_subnetwork <- function(subnet, hindiii_lookup, long_range=2^20, long_only=F
 
 
 #Community analysis ------------------------------------------------------------
+cell_net <- function(subgraph, del_type){
+  #remove primed or naive connections
+  t_subgraph <- delete.edges(subgraph, E(subgraph)[E(subgraph)$origin == del_type])
+  #delete vertices with no connections
+  t_graph <- delete.vertices(t_subgraph,which(degree(t_subgraph)<1))
+  
+  return(t_graph)
+  
+}
 
 
 nodes2granges <- function(nodes, lookup_dt){

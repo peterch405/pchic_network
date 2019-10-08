@@ -83,6 +83,18 @@ tco_median <- function(A,B, ...){
 }
 
 
-
-
+#'Only keep chromosomes listed
+#'Taken from:
+#'https://support.bioconductor.org/p/83588/
+#'
+#'@param genome BSgenome object
+#'@param seqnames names of chromosomes to keep 
+#'
+keepBSgenomeSequences <- function(genome, seqnames)
+{
+  stopifnot(all(seqnames %in% seqnames(genome)))
+  genome@user_seqnames <- setNames(seqnames, seqnames)
+  genome@seqinfo <- genome@seqinfo[seqnames]
+  genome
+}
 

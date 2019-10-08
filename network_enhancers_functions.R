@@ -13,11 +13,6 @@
 #'
 ROSE_OSN_HindIII_table <- function(enhancer_gr, hindiii_gr, OSN_gr){
 
-  # enhancer_gr <- Primed_enh
-  # hindiii_gr
-  # OSN_gr <- OSN_primed
-  
-  
   #enhancer hindiii overlap
   enh_hindiii <- findOverlaps(enhancer_gr, hindiii_gr)
   
@@ -32,7 +27,6 @@ ROSE_OSN_HindIII_table <- function(enhancer_gr, hindiii_gr, OSN_gr){
   
   enh_OSN_ovl <- findOverlaps(enhancer_gr, OSN_gr)
   #subset OSN to only those overlapping enhancer
-  # OSN_enh_gr <- OSN_gr[unique(subjectHits(enh_OSN_ovl))]
   
   OSN_enhancer_df <- data.frame(name=enhancer_gr[queryHits(enh_OSN_ovl)]$name, 
                                 OSN=OSN_gr[subjectHits(enh_OSN_ovl)]$name)
@@ -43,19 +37,6 @@ ROSE_OSN_HindIII_table <- function(enhancer_gr, hindiii_gr, OSN_gr){
                                     paste(ids, collapse = ",")
                                   })
   
-  # hindiii_OSN_ovl <- findOverlaps(hindiii_gr, OSN_enh_gr)
-  
-  # hindiii_OSN_df <- data.frame(ID=hindiii_gr[queryHits(hindiii_OSN_ovl)]$ID, 
-  #                              OSN=OSN_enh_gr[subjectHits(hindiii_OSN_ovl)]$name)
-  
-  # hindiii_OSN_lookup <- aggregate(x = hindiii_OSN_df["OSN"], 
-  #                             by=hindiii_OSN_df["ID"], 
-  #                             FUN = function(ids){
-  #                             paste(ids, collapse = ",")
-  #                            })
-  
-  # enh_hindiii_OSN <- merge(enh_hindiii_df, hindiii_OSN_lookup, 
-  #                                 by = "ID", all = TRUE)
   
   enh_hindiii_OSN <- merge(enh_hindiii_df, OSN_enhancer_lookup, 
                            by = "name", all = TRUE)
@@ -68,9 +49,10 @@ ROSE_OSN_HindIII_table <- function(enhancer_gr, hindiii_gr, OSN_gr){
                                   FUN = function(ids){
                                     paste(ids, collapse = ";")
                                   })
+
   #only want these columns
   enh_hindiii_OSN_all <- merge(data.frame(enhancer_gr)[c("name", "seqnames", "start", "end", 
-                                                         "width", "strand", "score","type", "gene_name")], 
+                                                         "width", "strand", "score","type")], 
                                enh_hindiii_OSN_lookup, 
                                by = "name", all.x = TRUE)
   
@@ -432,7 +414,7 @@ setGeneric("origin", function(object) standardGeneric("origin"))
 setMethod("origin", "CircosData", function(object) object@origin)
 
 #generic set in network_enhancer_class
-#setGeneric("enhancers", function(object) standardGeneric("enh"))
+# setGeneric("enhancers", function(object) standardGeneric("enh"))
 setMethod("enhancers", "CircosData", function(object, type) object@enhancers)
 
 setGeneric("enhBED", function(object) standardGeneric("enhBED"))

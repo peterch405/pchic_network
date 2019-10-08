@@ -6,19 +6,20 @@ library(igraph)
 library(Gmisc)
 library(pheatmap)
 library(ggpubr)
+library(GenomicRanges)
 
 source("network_chromhmm_functions.R")
 
 #Plot emmission state heatmap (didn't output on cluster) -----------------------
 
-plot_emmisions("6_chromhmm_plots/output_model_hist_all_16/emissions_16.txt",
-               out_path="6_chromhmm_plots/output_model_hist_all_16/emmisions_16.pdf")
+plot_emmisions("6_chromhmm_plots/emissions_16.txt",
+               out_path="6_chromhmm_plots/emmisions_16.pdf")
 
 
 
 #Make transition plots ---------------------------------------------------------
 
-links_nodes_cat_col_coord_deb2b <- readRDS("6_chromhmm_plots/links_nodes_cat_col_coord_deb2b_20190829.rds")
+links_nodes_cat_col_coord_deb2b <- readRDS("2_network_make/links_nodes_cat_col_coord_deb2b_20190829.rds")
 nodes_all <- links_nodes_cat_col_coord_deb2b$nodes
 links_all <- links_nodes_cat_col_coord_deb2b$links
 
@@ -150,10 +151,10 @@ state_transition_plot(sankey_act_nodes_full[c("chromhmm_naive", "chromhmm_primed
 
 #Genome wide chromhmm numbers --------------------------------------------------
 
-naive_nodes <- read_delim("6_chromhmm_plots/naive_nodes_wchip_20181218.txt", 
+naive_nodes <- read_delim("0_network_data_preparation/naive_nodes_wchip_20181218.txt", 
                           "\t", escape_double = FALSE, trim_ws = TRUE)
 
-primed_nodes <- read_delim("6_chromhmm_plots/primed_nodes_wchip_20181218.txt", 
+primed_nodes <- read_delim("0_network_data_preparation/primed_nodes_wchip_20181218.txt", 
                            "\t", escape_double = FALSE, trim_ws = TRUE)
 
 #remove mt
@@ -268,7 +269,7 @@ hindiii_gr <- readRDS("6_chromhmm_plots/hindiii_gr.rds")
 mixed_hindiii <- hindiii_gr[hindiii_gr$ID %in% sankey_act_nodes_full$ID[sankey_act_nodes_full$chromhmm_naive == "Mixed" & 
                                                                           sankey_act_nodes_full$chromhmm_primed %in% c("Bivalent", "Polycomb Repressed")]]
 
-naive_16_seg_other <- rtracklayer::import("6_chromhmm_plots/output_model_hist_all_16/naive_16_segments.bed",
+naive_16_seg_other <- rtracklayer::import("6_chromhmm_plots/naive_16_segments.bed",
                                           format = "bed")
 
 naive_16_seg_chr <- diffloop::addchr(naive_16_seg_other)

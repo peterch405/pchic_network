@@ -66,8 +66,7 @@ degree_subnetwork <- function(net_all_naive, net_all_primed, net_number, gene_on
   
   ggpaired(degree_all, x = "origin", y = "count",
            color = "origin", ylab="gene degree", xlab=NULL,
-           line.color = "gray",  line.size = 0.2, point.size = 0.5,
-           font.label = list(size = 5, color = "black"), label="gene") +
+           line.color = "gray",  line.size = 0.2, point.size = 0.5) +
            stat_compare_means(paired=TRUE)
 
 }

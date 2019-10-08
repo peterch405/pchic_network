@@ -5,39 +5,40 @@ library(plyr)
 library(dplyr)
 library(data.table)
 library(Sushi)
+library(rjson)
 
 source("network_dynamics_functions.R")
 source("network_make_functions.R")
 
 #Load RNA-seq data -------------------------------------------------------------
 
-de_genes <- read_delim("2_network_make/de_genes_takashima_GRCh38.87_anno_opposing_strand_prot_genes.txt", 
+de_genes <- read_delim("1_DESeq2_gene_expression/de_genes_takashima_GRCh38.87_anno_opposing_strand_prot_genes.txt", 
                        "\t", escape_double = FALSE, trim_ws = TRUE)
 
 
 
 #Load interaction data ---------------------------------------------------------
 
-naive_nodes <- read_delim("2_network_make/naive_nodes_wchip_20181218.txt", 
+naive_nodes <- read_delim("0_network_data_preparation/naive_nodes_wchip_20181218.txt", 
                           "\t", escape_double = FALSE, trim_ws = TRUE)
 
-primed_nodes <- read_delim("2_network_make/primed_nodes_wchip_20181218.txt", 
+primed_nodes <- read_delim("0_network_data_preparation/primed_nodes_wchip_20181218.txt", 
                            "\t", escape_double = FALSE, trim_ws = TRUE)
 
-naive_intract <- read_delim("2_network_make/naive_intract_wchip_20181218.txt", 
+naive_intract <- read_delim("0_network_data_preparation/naive_intract_wchip_20181218.txt", 
                             "\t", escape_double = FALSE, col_names = TRUE, 
                             trim_ws = TRUE)
 
-primed_intract <- read_delim("2_network_make/primed_intract_wchip_20181218.txt", 
+primed_intract <- read_delim("0_network_data_preparation/primed_intract_wchip_20181218.txt", 
                              "\t", escape_double = FALSE, col_names = TRUE, 
                              trim_ws = TRUE)
 
 #with 3 score cutoff
-naive_intract_3 <- read_delim("2_network_make/naive_3_intract_wchip_20181218.txt", 
+naive_intract_3 <- read_delim("0_network_data_preparation/naive_3_intract_wchip_20181218.txt", 
                               "\t", escape_double = FALSE, col_names = TRUE, 
                               trim_ws = TRUE)
 
-primed_intract_3 <- read_delim("2_network_make/primed_3_intract_wchip_20181218.txt", 
+primed_intract_3 <- read_delim("0_network_data_preparation/primed_3_intract_wchip_20181218.txt", 
                                "\t", escape_double = FALSE, col_names = TRUE, 
                                trim_ws = TRUE)
 
@@ -58,7 +59,7 @@ links_nodes_cal_col_bed2b_enh <- categorise_enhancers(links_nodes_cat_col_deb2b)
 
 #Add Gephi layout coordinates (to create reproducible layouts, this has to be exported from gephi)
 links_nodes_cat_col_coord_deb2b <- add_layout_coordinate(links_nodes_cal_col_bed2b_enh, 
-                                                         "2_network_make/network_expression/data.json")
+                                                         "2_network_make/data.json")
 
 #Make network 
 net_out_deb2b <- make_network(links_nodes_cat_col_coord_deb2b, "2_network_make/np_summary_deb2b_20190829.rds",

@@ -5,11 +5,15 @@ library(readr)
 library(data.table)
 library(ggforce)
 library(ggpubr)
+# library(tidyr)
+library(gplots)
+library(UpSetR)
+library(eulerr)
 
 source("network_OSN_functions.R")
-source("network_enhancers_functions.R")
 source("network_enhancer_class.R")
 source("annotate_promoters_functions.R")
+source("network_enhancers_functions.R")
 
 
 #Determine distance of neighbouring fragments to merge by ROSE -----------------
@@ -53,10 +57,10 @@ ggsave("7_enhancers/ROSE_merge_size.pdf")
 #Network enhancer viewpoint ----------------------------------------------------
 
 #load non-trans network
-net_all_s <- readRDS("7_enhancers/net_all_s_20190829.rds")
+net_all_s <- readRDS("2_network_make/net_all_s_20190829.rds")
 chromhmm_enh_OSN_lookup <- readRDS("7_enhancers/chromhmm_enh_OSN_lookup_20190112.rds")
 
-links_nodes_cat_col_coord_deb2b <- readRDS("7_enhancers/links_nodes_cat_col_coord_deb2b_20190829.rds")
+links_nodes_cat_col_coord_deb2b <- readRDS("2_network_make/links_nodes_cat_col_coord_deb2b_20190829.rds")
 nodes_all <- links_nodes_cat_col_coord_deb2b$nodes
 
 #Annotated by transcript gene names
@@ -70,7 +74,7 @@ np_enh_OSN_lookup <- readRDS("7_enhancers/np_enh_OSN_lookup_20190709.rds")
 nodes_all_prot <- readRDS("7_enhancers/nodes_all_prot.rds")
 
 
-de_genes <- read_delim("7_enhancers/de_genes_takashima_GRCh38.87_anno_opposing_strand_prot_genes.txt", 
+de_genes <- read_delim("1_DESeq2_gene_expression/de_genes_takashima_GRCh38.87_anno_opposing_strand_prot_genes.txt", 
                        "\t", escape_double = FALSE, trim_ws = TRUE)
 names(de_genes)[8] <- "prot_genes"
 
@@ -315,11 +319,13 @@ remove_primed_from_E <- intersect(SE_primed_prot_genes, E_primed_prot_genes)
 
 
 E_shared_prot_genes <- intersect(E_naive_prot_genes, E_primed_prot_genes)
+remove_shared_from_E <- intersect(SE_shared_prot_genes, c(E_shared_prot_genes,E_naive_prot_genes, E_primed_prot_genes))
 
-E_naive_prot_genes_woSE <- E_naive_prot_genes[!(E_naive_prot_genes %in% remove_naive_from_E)]
-E_primed_prot_genes_woSE <- E_primed_prot_genes[!(E_primed_prot_genes %in% remove_primed_from_E)]
 
-E_shared_prot_genes_woSE <- E_shared_prot_genes[!(E_shared_prot_genes %in% c(remove_naive_from_E, remove_primed_from_E))]
+E_naive_prot_genes_woSE <- E_naive_prot_genes[!(E_naive_prot_genes %in% c(remove_naive_from_E, remove_shared_from_E))]
+E_primed_prot_genes_woSE <- E_primed_prot_genes[!(E_primed_prot_genes %in% c(remove_primed_from_E, remove_shared_from_E))]
+
+E_shared_prot_genes_woSE <- E_shared_prot_genes[!(E_shared_prot_genes %in% c(remove_naive_from_E, remove_primed_from_E,remove_shared_from_E))]
 
 E_naive_prot_genes_woSE <- E_naive_prot_genes_woSE[!(E_naive_prot_genes_woSE %in% E_shared_prot_genes)]
 
@@ -347,6 +353,87 @@ ggsave("7_enhancers/E_expression.pdf", width = 5, height = 5)
 
 
 
+write.csv(SE_df_expr_plot, "7_enhancers/SE_df.csv")
+write.csv(E_df_expr_plot, "7_enhancers/E_df.csv")
+
+
+#Plot venn diagrams ------------------------------------------------------------
+
+pdf("7_enhancers/SE_E_venns.pdf", width = 4, height = 4)
+e_fit <- euler(c(A = sum(E_df_expr_plot$origin == "naive"), 
+                 B = sum(E_df_expr_plot$origin == "primed"), 
+                 "A&B" = sum(E_df_expr_plot$origin == "shared")))
+plot(e_fit, main="Enhancer", labels = c("Naive", "Primed", "Shared"),
+     quantities = list(type = c("counts")))
+grid.newpage()
+se_fit <- euler(c(A = sum(SE_df_expr_plot$origin == "naive"), 
+                  B = sum(SE_df_expr_plot$origin == "primed"), 
+                  "A&B" = sum(SE_df_expr_plot$origin == "shared")))
+plot(se_fit, main="SuperEnhancer", labels = c("Naive", "Primed", "Shared"),
+     quantities = list(type = c("counts")))
+dev.off()
+
+
+
+
+
+#Load ROSE bed -----------------------------------------------------------------
+hindiii_gr <- readRDS("6_chromhmm_plots/hindiii_gr.rds")
+
+Naive_enh <- rtracklayer::import("7_enhancers/Naive_H3K27ac_peaks_narrowPeak_Gateway_Enhancers.bed",
+                                 format="bed")
+Naive_suprenh <- rtracklayer::import("7_enhancers/Naive_H3K27ac_peaks_narrowPeak_Gateway_SuperEnhancers.bed",
+                                     format="bed")
+
+mcols(Naive_enh)$type <- "E"
+mcols(Naive_enh)$type[mcols(Naive_enh)$name %in% mcols(Naive_suprenh)$name] <- "SE"
+
+Primed_enh <- rtracklayer::import("7_enhancers/Primed_H3K27ac_peaks_narrowPeak_Gateway_Enhancers.bed",
+                                  format="bed")
+Primed_suprenh <- rtracklayer::import("7_enhancers/Primed_H3K27ac_peaks_narrowPeak_Gateway_SuperEnhancers.bed",
+                                      format="bed")
+
+mcols(Primed_enh)$type <- "E"
+mcols(Primed_enh)$type[mcols(Primed_enh)$name %in% mcols(Primed_suprenh)$name] <- "SE"
+
+
+
+#Overlap with OSN peaks (don't do this on a hindiii fragment, but on a peak resolution)
+# 1 = naive; 2 = shared; 3 = primed
+OSN_all <- rtracklayer::import("7_enhancers/osn_num.bed",
+                               format = "bed")
+
+OSN_naive <- OSN_all[mcols(OSN_all)$name %in% c(1, 2)]
+OSN_primed <- OSN_all[mcols(OSN_all)$name %in% c(2, 3)]
+
+
+Primed_enh_hindiii_OSN <- ROSE_OSN_HindIII_table(Primed_enh, hindiii_gr, OSN_primed)
+Naive_enh_hindiii_OSN <- ROSE_OSN_HindIII_table(Naive_enh, hindiii_gr, OSN_naive)
+
+#enhancer lookup for OSN (has both naive and primed OSN overlaping naive primed enhancers)
+
+enh_OSN_ovl <- findOverlaps(c(Primed_enh, Naive_enh), OSN_all)
+
+OSN_enhancer_df <- data.frame(name=c(Primed_enh, Naive_enh)[queryHits(enh_OSN_ovl)]$name,
+                              OSN=OSN_all[subjectHits(enh_OSN_ovl)]$name)
+
+OSN_enhancer_lookup <- aggregate(x = OSN_enhancer_df["OSN"],
+                                 by= OSN_enhancer_df["name"],
+                                 FUN = function(ids){
+                                   paste(ids, collapse = ",")
+                                 })
+
+OSN_enhancer_lookup$origin <- NA
+OSN_enhancer_lookup$origin[grepl("naive", OSN_enhancer_lookup$name)] <- "naive"
+OSN_enhancer_lookup$origin[grepl("Primed", OSN_enhancer_lookup$name)] <- "primed"
+
+OSN_enhancer_lookup$short_name <- ifelse(grepl("naive", OSN_enhancer_lookup$name),
+                                         gsub("_naive_peak", "_np", gsub("_lociStitched", "", OSN_enhancer_lookup$name)),
+                                         gsub("_Primed_H3K27ac_peak", "_pp", gsub("_lociStitched", "", OSN_enhancer_lookup$name)))
+
+
+setDT(OSN_enhancer_lookup, key="short_name")
+
 
 #LogOdds ratio -----------------------------------------------------------------
 #get interaction counts for all baits
@@ -368,12 +455,15 @@ baited_genes_hindiii <- merge(bait_annotation_gene_all, hindiii_lookup,
                               by=c("chrom", "start", "end"), all.x=TRUE)
 
 
+mcols(Naive_enh)$short_name <- gsub("_lociStitched", "", gsub("naive_peak", "np", Naive_enh$name))
+mcols(Primed_enh)$short_name <- gsub("_lociStitched", "", gsub("Primed_H3K27ac_peak", "pp", Primed_enh$name))
+
 
 baited_enhancer_summary_cnt <- get_interaction_counts(baited_genes_hindiii$ID, net_all_s, 
                                                       chromhmm_enh_OSN_lookup, p=7, 
                                                       count_without_b2b = FALSE, 
                                                       type = "raw", score_diff = 2, 
-                                                      gene_lookup_dt)suprised
+                                                      gene_lookup_dt)
 
 #Simplify enhancer tables
 np_seperate_enhancer <- list()
@@ -592,8 +682,50 @@ grid.newpage()
 gridExtra::grid.table(data.frame(counts_matrix), theme=gridExtra::ttheme_default(base_size=7))
 res <- logOddsRatio(counts_matrix[1:4,1:3])
 dev.off()
+  
+
+#Barplots / Upset plots --------------------------------------------------------
+
+#mark shared enhancers
+pn_overlaps <- findOverlaps(Primed_enh, Naive_enh)
+mcols(Primed_enh)$ID <- "p"
+mcols(Primed_enh)$ID[unique(queryHits(pn_overlaps))] <- "s"
+mcols(Naive_enh)$ID <- "n"
+mcols(Naive_enh)$ID[unique(subjectHits(pn_overlaps))] <- "s"
+#simple enhancer only plot
+
+expressionInput_enh <- c(Naive = sum((mcols(Naive_enh)$ID == "n")*1), 
+                         Primed = sum((mcols(Primed_enh)$ID == "p")*1), 
+                         Shared = 0,
+                         `Naive&Shared` = sum((mcols(Naive_enh)$ID == "s")*1), 
+                         `Primed&Shared` = sum((mcols(Primed_enh)$ID == "s")*1))
+
+plot_enh_df <- fromExpression(expressionInput_enh)
+
+pdf("7_enhancers/enhancer_overlap.pdf", 
+    onefile=FALSE, width = 4, height = 4)
+upset(plot_enh_df, nsets = 6, keep.order = TRUE,order.by = "freq",
+      point.size = 2.5, line.size = 1.5, 
+      mainbar.y.label = "Enhancer Intersections")
+dev.off()
+
+#Overlap of SE -----------------------------------------------------------------
+
+expressionInput_se <- c(Naive = table(Naive_enh$ID[Naive_enh$type == "SE"])[["n"]], 
+                        Primed = table(Primed_enh$ID[Primed_enh$type == "SE"])[["p"]], 
+                        Shared = 0,
+                        `Naive&Shared` = table(Naive_enh$ID[Naive_enh$type == "SE"])[["s"]], 
+                        `Primed&Shared` = table(Primed_enh$ID[Primed_enh$type == "SE"])[["s"]])
+
+plot_se_df <- fromExpression(expressionInput_se)
+pdf("7_enhancers//SE_np_overlap.pdf", 
+    onefile=FALSE, width = 4, height = 4)
+upset(plot_se_df, nsets = 3, keep.order = TRUE, #order.by = "freq",
+      point.size = 2.5, line.size = 1.5, 
+      mainbar.y.label = "SE Intersections")
+dev.off()
 
 
-pheatmap::pheatmap(counts_matrix[1:4,1:3], color = colorRampPalette(rev(brewer.pal(n = 7, name ="RdBu")))(100), 
-                   cluster_cols = FALSE, cluster_rows = FALSE, display_numbers = TRUE)
+
+
 

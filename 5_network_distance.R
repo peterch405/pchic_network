@@ -5,20 +5,20 @@ library(ComplexHeatmap)
 
 #interactions with chip-seq data -----------------------------------------------
 
-naive_intract <- read_delim("5_network_distance/naive_intract_wchip_20181218.txt", 
+naive_intract <- read_delim("0_network_data_preparation/naive_intract_wchip_20181218.txt", 
                             "\t", escape_double = FALSE, col_names = TRUE, 
                             trim_ws = TRUE)
 
-primed_intract <- read_delim("5_network_distance/primed_intract_wchip_20181218.txt", 
+primed_intract <- read_delim("0_network_data_preparation//primed_intract_wchip_20181218.txt", 
                              "\t", escape_double = FALSE, col_names = TRUE, 
                              trim_ws = TRUE)
 
 #need to fill chip-seq information from nodes not from interactions as nodes may still have mark even without interaction!
 
-naive_nodes <- read_delim("5_network_distance/naive_nodes_wchip_20181218.txt", 
+naive_nodes <- read_delim("0_network_data_preparation/naive_nodes_wchip_20181218.txt", 
                           "\t", escape_double = FALSE, trim_ws = TRUE)
 
-primed_nodes <- read_delim("5_network_distance/primed_nodes_wchip_20181218.txt", 
+primed_nodes <- read_delim("0_network_data_preparation/primed_nodes_wchip_20181218.txt", 
                            "\t", escape_double = FALSE, trim_ws = TRUE)
 
 
@@ -42,13 +42,9 @@ np_fheat <- np_fheat %>% separate("ID", c("b_ID", "oe_ID"),  sep = ":")
 
 
 
-primed_nodes_sub <- primed_nodes[c("ID", "chromhmm", "compartment",
-                                   "h3k27ac","h3k27me3", "h3k4me3", "h3k4me1",
-                                   "h3k9me3")]
+primed_nodes_sub <- primed_nodes[c("ID", "chromhmm", "compartment")]
 
-naive_nodes_sub <- naive_nodes[c("ID", "chromhmm", "compartment",
-                                 "h3k27ac","h3k27me3", "h3k4me3", "h3k4me1",
-                                 "h3k9me3")]
+naive_nodes_sub <- naive_nodes[c("ID", "chromhmm", "compartment")]
 
 #primed b
 orig_names <- colnames(primed_nodes_sub)
@@ -109,15 +105,7 @@ np_fheat$chromhmm_oe_naive <- chromhmm_state2_num(np_fheat$chromhmm_oe_naive)
 p_fheat_1k_long <- np_fheat[order(np_fheat$distance_primed, decreasing = TRUE),][1:1000,]
 
 long <- as.data.frame(cbind(log2(p_fheat_1k_long[c("distance_primed","distance_naive")]), 
-                            p_fheat_1k_long[c("h3k27me3_b_primed","h3k27me3_oe_primed","h3k27ac_b_primed","h3k27ac_oe_primed",
-                                              "h3k9me3_b_primed","h3k9me3_oe_primed", 
-                                              "h3k4me3_b_primed","h3k4me3_oe_primed",
-                                              "h3k4me1_b_primed","h3k4me1_oe_primed",
-                                              "h3k27me3_b_naive","h3k27me3_oe_naive",
-                                              "h3k27ac_b_naive","h3k27ac_oe_naive","h3k9me3_b_naive",
-                                              "h3k9me3_oe_naive","h3k4me3_b_naive","h3k4me3_oe_naive",
-                                              "h3k4me1_b_naive","h3k4me1_oe_naive",
-                                              "chromhmm_b_primed", "chromhmm_oe_primed",
+                            p_fheat_1k_long[c("chromhmm_b_primed", "chromhmm_oe_primed",
                                               "chromhmm_b_naive", "chromhmm_oe_naive", 
                                               "b_ID", "oe_ID")]))
 
@@ -127,15 +115,7 @@ long <- as.data.frame(cbind(log2(p_fheat_1k_long[c("distance_primed","distance_n
 n_fheat_1k_long <- np_fheat[order(np_fheat$distance_naive, decreasing = TRUE),][1:1000,]
 
 n_long <- as.data.frame(cbind(log2(n_fheat_1k_long[c("distance_primed","distance_naive")]), 
-                              n_fheat_1k_long[c("h3k27me3_b_primed","h3k27me3_oe_primed","h3k27ac_b_primed","h3k27ac_oe_primed",
-                                                "h3k9me3_b_primed","h3k9me3_oe_primed", 
-                                                "h3k4me3_b_primed","h3k4me3_oe_primed",
-                                                "h3k4me1_b_primed","h3k4me1_oe_primed",
-                                                "h3k27me3_b_naive","h3k27me3_oe_naive",
-                                                "h3k27ac_b_naive","h3k27ac_oe_naive","h3k9me3_b_naive",
-                                                "h3k9me3_oe_naive","h3k4me3_b_naive","h3k4me3_oe_naive",
-                                                "h3k4me1_b_naive","h3k4me1_oe_naive",
-                                                "chromhmm_b_primed", "chromhmm_oe_primed",
+                              n_fheat_1k_long[c("chromhmm_b_primed", "chromhmm_oe_primed",
                                                 "chromhmm_b_naive", "chromhmm_oe_naive", 
                                                 "b_ID", "oe_ID")]))
 
@@ -152,32 +132,27 @@ n_long <- as.data.frame(cbind(log2(n_fheat_1k_long[c("distance_primed","distance
 
 
 set.seed(3)
-km <- kmeans(as.matrix(long[,23:24]), centers = 6)$cluster
+km <- kmeans(as.matrix(long[,3:4]), centers = 6)$cluster
 
-hc1 <- hclust(dist(long[,23:24]))
+hc1 <- hclust(dist(long[,3:4]))
 od1 <- hc1$order
 
 
 #         1         2           3         4           5          6            8
 col <- c('#00AE0F', '#c9c9c9', '#FF8300', '#C300FF', '#6e6e6e', '#FF0100', '#297800')
 
-h1 <- Heatmap(as.matrix(long[,23:24]), show_row_names = FALSE, gap = unit(2, "mm"), cluster_columns = FALSE, 
+h1 <- Heatmap(as.matrix(long[,3:4]), show_row_names = FALSE, gap = unit(2, "mm"), cluster_columns = FALSE, 
               split=long$chromhmm_b_primed, col=col, km=km, row_order = od1) +
   Heatmap(as.matrix(long[,1]), show_row_names = FALSE, gap = unit(2, "mm"), cluster_columns = FALSE, row_order = od1,
-          circlize::colorRamp2(c(-1, 0, 30), c("grey", "blue", "red"))) +
-  Heatmap(as.matrix(long[,3:12]), show_row_names = FALSE, gap = unit(2, "mm"), cluster_columns = FALSE, row_order = od1,
-          circlize::colorRamp2(c(0,10), c("red", "darkred")))
+          circlize::colorRamp2(c(-1, 0, 30), c("grey", "blue", "red")))
 
 #                      1         2           3         4           5          6         7          8
 col_long_naive <- c('#00AE0F', '#c9c9c9', '#FF8300', '#C300FF', '#6e6e6e', '#FF0100', '#eedd9a', '#297800')
 
-h2 <- Heatmap(as.matrix(long[,25:26]), show_row_names = FALSE, gap = unit(2, "mm"), cluster_columns = FALSE, 
+h2 <- Heatmap(as.matrix(long[,5:6]), show_row_names = FALSE, gap = unit(2, "mm"), cluster_columns = FALSE, 
               split=long$chromhmm_b_primed, col=col_long_naive, km=km, row_order = od1) +
   Heatmap(as.matrix(long[,2]), show_row_names = FALSE, gap = unit(2, "mm"), cluster_columns = FALSE, row_order = od1,
-          circlize::colorRamp2(c(-1, 0, 30), c("grey", "blue", "red"))) +
-  Heatmap(as.matrix(long[,12:22]), show_row_names = FALSE, gap = unit(2, "mm"), cluster_columns = FALSE, row_order = od1,
-          circlize::colorRamp2(c(0,10), c("red", "darkred")))
-
+          circlize::colorRamp2(c(-1, 0, 30), c("grey", "blue", "red")))
 
 
 pdf("5_network_distance/chrommhmm_hist_all_heatmap_primed_20190105.pdf")
@@ -191,15 +166,7 @@ dev.off()
 n_fheat_1k_long <- np_fheat[order(np_fheat$distance_naive, decreasing = TRUE),][1:1000,]
 
 n_long <- as.data.frame(cbind(log2(n_fheat_1k_long[c("distance_primed","distance_naive")]), 
-                              n_fheat_1k_long[c("h3k27me3_b_primed","h3k27me3_oe_primed","h3k27ac_b_primed","h3k27ac_oe_primed",
-                                                "h3k9me3_b_primed","h3k9me3_oe_primed", 
-                                                "h3k4me3_b_primed","h3k4me3_oe_primed",
-                                                "h3k4me1_b_primed","h3k4me1_oe_primed",
-                                                "h3k27me3_b_naive","h3k27me3_oe_naive",
-                                                "h3k27ac_b_naive","h3k27ac_oe_naive","h3k9me3_b_naive",
-                                                "h3k9me3_oe_naive","h3k4me3_b_naive","h3k4me3_oe_naive",
-                                                "h3k4me1_b_naive","h3k4me1_oe_naive",
-                                                "chromhmm_b_primed", "chromhmm_oe_primed",
+                              n_fheat_1k_long[c("chromhmm_b_primed", "chromhmm_oe_primed",
                                                 "chromhmm_b_naive", "chromhmm_oe_naive", 
                                                 "b_ID", "oe_ID")]))
 
@@ -215,9 +182,9 @@ n_long <- as.data.frame(cbind(log2(n_fheat_1k_long[c("distance_primed","distance
 # unknown 7 - #eedd9a
 # h3k4me1 8 - #297800
 set.seed(3)
-nkm <- kmeans(as.matrix(n_long[,25:26]), centers = 6)$cluster
+nkm <- kmeans(as.matrix(n_long[,5:6]), centers = 6)$cluster
 
-nhc2 <- hclust(dist(n_long[,25:26]))
+nhc2 <- hclust(dist(n_long[,5:6]))
 nod2 <- nhc2$order
 
 
@@ -227,19 +194,15 @@ ncol <-  c('#00AE0F', '#c9c9c9', '#FF8300', '#C300FF', "#6e6e6e", '#FF0100', '#2
 ncol2 <-  c('#00AE0F', '#c9c9c9', '#FF8300', '#C300FF', "#6e6e6e", '#FF0100', '#297800')
 
 
-nh1 <- Heatmap(as.matrix(n_long[,23:24]), show_row_names = FALSE, gap = unit(2, "mm"), cluster_columns = FALSE, 
+nh1 <- Heatmap(as.matrix(n_long[,3:4]), show_row_names = FALSE, gap = unit(2, "mm"), cluster_columns = FALSE, 
                split=n_long$chromhmm_b_naive, col=ncol, km=nkm, row_order = nod2) +
   Heatmap(as.matrix(n_long[,1]), show_row_names = FALSE, gap = unit(2, "mm"), cluster_columns = FALSE, row_order = nod2,
-          circlize::colorRamp2(c(0, 30), c("blue", "red"))) +
-  Heatmap(as.matrix(n_long[,3:12]), show_row_names = FALSE, gap = unit(2, "mm"), cluster_columns = FALSE, row_order = nod2,
-          circlize::colorRamp2(c(0,10), c("red", "darkred")))
+          circlize::colorRamp2(c(0, 30), c("blue", "red")))
 
-nh2 <- Heatmap(as.matrix(n_long[,25:26]), show_row_names = FALSE, gap = unit(2, "mm"), cluster_columns = FALSE, 
+nh2 <- Heatmap(as.matrix(n_long[,5:6]), show_row_names = FALSE, gap = unit(2, "mm"), cluster_columns = FALSE, 
                split=n_long$chromhmm_b_naive, col=ncol2, km=nkm, row_order = nod2) +
   Heatmap(as.matrix(n_long[,2]), show_row_names = FALSE, gap = unit(2, "mm"), cluster_columns = FALSE, row_order = nod2,
-          circlize::colorRamp2(c(0, 30), c("blue", "red"))) +
-  Heatmap(as.matrix(n_long[,12:22]), show_row_names = FALSE, gap = unit(2, "mm"), cluster_columns = FALSE, row_order = nod2,
-          circlize::colorRamp2(c(0,10), c("red", "darkred")))
+          circlize::colorRamp2(c(0, 30), c("blue", "red")))
 
 
 pdf("5_network_distance/chrommhmm_hist_all_heatmap_naive_20190105.pdf")
@@ -251,7 +214,7 @@ dev.off()
 
 #ChromHMM states by distance heatmap -------------------------------------------
 
-links_nodes_cat_col_coord_deb2b <- readRDS("5_network_distance/links_nodes_cat_col_coord_deb2b_20190829.rds")
+links_nodes_cat_col_coord_deb2b <- readRDS("2_network_make/links_nodes_cat_col_coord_deb2b_20190829.rds")
 
 
 allu_df <- data.frame(b_ID=as.character(links_nodes_cat_col_coord_deb2b$links$b_ID), 
@@ -262,12 +225,12 @@ allu_df <- data.frame(b_ID=as.character(links_nodes_cat_col_coord_deb2b$links$b_
 #add chromhmm state from nodes_all df
 naive_chromhmm_lkup <- data.frame(b_ID=naive_nodes$ID, chromhmm_naive_b=naive_nodes$chromhmm)
 allu_df <- merge(allu_df, naive_chromhmm_lkup, by="b_ID", all.x=TRUE)
-setnames(naive_chromhmm_lkup, c("b_ID", "chromhmm_naive_b"), c("oe_ID", "chromhmm_naive_oe"))
+data.table::setnames(naive_chromhmm_lkup, c("b_ID", "chromhmm_naive_b"), c("oe_ID", "chromhmm_naive_oe"))
 allu_df <- merge(allu_df, naive_chromhmm_lkup, by="oe_ID", all.x=TRUE)
 
 primed_chromhmm_lkup <- data.frame(b_ID=primed_nodes$ID, chromhmm_primed_b=primed_nodes$chromhmm)
 allu_df <- merge(allu_df, primed_chromhmm_lkup, by="b_ID", all.x=TRUE)
-setnames(primed_chromhmm_lkup, c("b_ID", "chromhmm_primed_b"), c("oe_ID", "chromhmm_primed_oe"))
+data.table::setnames(primed_chromhmm_lkup, c("b_ID", "chromhmm_primed_b"), c("oe_ID", "chromhmm_primed_oe"))
 allu_df <- merge(allu_df, primed_chromhmm_lkup, by="oe_ID", all.x=TRUE)
 
 allu_df$chromhmm_naive <- paste(allu_df$chromhmm_naive_b, allu_df$chromhmm_naive_oe, sep="_")
@@ -305,13 +268,6 @@ for(i in names(table(allu_df$chromhmm_origin))){
 
 allu_outlier <- plyr::rbind.fill(out_df)
 
-#plot data with outliers removed
-ggplot(allu_outlier, aes(x=chromhmm_origin, y=distance)) + 
-  # geom_violin(trim=FALSE)+
-  geom_boxplot(width=0.1, fill="white") +
-  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
-  geom_signif(comparisons = comparisons_lst,
-              map_signif_level = TRUE)
 
 #split into cell type
 allu_outlier_n <- allu_outlier[allu_outlier$origin %in% "naive",]

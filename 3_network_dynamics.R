@@ -5,10 +5,11 @@ library(Sushi)
 library(igraph)
 library(data.table)
 library(rtracklayer)
+library(tcltk2)
 
 source("network_dynamics_functions.R")
 
-np_summary_deb2b <- readRDS("3_network_dynamics/np_summary_deb2b_20190829.rds")
+np_summary_deb2b <- readRDS("2_network_make/np_summary_deb2b_20190829.rds")
 
 
 ggplot(np_summary_deb2b, aes(x = v, y = e)) +
@@ -26,7 +27,7 @@ ggsave("3_network_dynamics/break_networks_non_merged_ve_deb2b.pdf",
 
 #Subnetwork plots --------------------------------------------------------------
 
-net_all_s <- readRDS("3_network_dynamics/net_all_s_20190829.rds")
+net_all_s <- readRDS("2_network_make/net_all_s_20190829.rds")
 all_subgraphs <- decompose.graph(net_all_s)
 
 hindiii_mid_lookup <- readRDS("3_network_dynamics/hindiii_mid_lookup.rds")
@@ -44,12 +45,14 @@ primed_bedpe_2650 <- get_bedpe(all_subgraphs[[2650]], hindiii_mid_lookup, "naive
 naive_bedpe_2650 <- get_bedpe(all_subgraphs[[2650]], hindiii_mid_lookup, "primed", mark_dist = 2^20)
 
 #NKX
-primed_bedpe_658 <- get_bedpe(all_subgraphs[[658]], hindiii_mid_lookup, "naive", mark_dist = 2^20)
-naive_bedpe_658 <- get_bedpe(all_subgraphs[[658]], hindiii_mid_lookup, "primed", mark_dist = 2^20)
+primed_bedpe_755 <- get_bedpe(all_subgraphs[[755]], hindiii_mid_lookup, "naive", mark_dist = 2^20)
+naive_bedpe_755 <- get_bedpe(all_subgraphs[[755]], hindiii_mid_lookup, "primed", mark_dist = 2^20)
 
 #HOXD
-primed_bedpe_1836 <- get_bedpe(all_subgraphs[[1836]], hindiii_mid_lookup, "naive", mark_dist = 2^20)
-naive_bedpe_1836 <- get_bedpe(all_subgraphs[[1836]], hindiii_mid_lookup, "primed", mark_dist = 2^20)
+primed_bedpe_1591 <- get_bedpe(all_subgraphs[[1591]], hindiii_mid_lookup, "naive", mark_dist = 2^20)
+naive_bedpe_1591 <- get_bedpe(all_subgraphs[[1591]], hindiii_mid_lookup, "primed", mark_dist = 2^20)
+
+
 
 
 hg38_chrom <- readRDS("3_network_dynamics/hg38_chrom.rds")
@@ -73,19 +76,17 @@ plot_subnetwork_sushi(primed_bedpe_2650, naive_bedpe_2650, hg38_chrom,
                       "3_network_dynamics/2650_changing_sushi_2^20_sax.pdf",
                       zoom=FALSE)
 
-plot_subnetwork_sushi(primed_bedpe_658, naive_bedpe_658, hg38_chrom,
-                      "3_network_dynamics/658_changing_sushi_2^20_sax.pdf",
+plot_subnetwork_sushi(primed_bedpe_755, naive_bedpe_755, hg38_chrom,
+                      "3_network_dynamics/755_changing_sushi_2^20_sax.pdf",
                       zoom=FALSE)
 
-plot_subnetwork_sushi(primed_bedpe_1836, naive_bedpe_1836, hg38_chrom,
-                      "3_network_dynamics/1836_changing_sushi_2^20_sax.pdf",
+plot_subnetwork_sushi(primed_bedpe_1591, naive_bedpe_1591, hg38_chrom,
+                      "3_network_dynamics/1591_changing_sushi_2^20_sax.pdf",
                       zoom=FALSE)
 
-plot_subnetwork_sushi(primed_bedpe_1836, naive_bedpe_1836, hg38_chrom,
-                      "3_network_dynamics/1836_changing_sushi_2^20_sax_zoom.pdf",
+plot_subnetwork_sushi(primed_bedpe_1591, naive_bedpe_1591, hg38_chrom,
+                      "3_network_dynamics/1591_changing_sushi_2^20_sax_zoom.pdf",
                       zoom=TRUE)
-
-plot_subnetwork_sushi(primed_bedpe_2301, naive_bedpe_2301, hg38_chrom, zoom=FALSE)
 
 H3K27me3_naive <- rtracklayer::import.bw("3_network_dynamics/H3K27me3_Naive_SRR1515138_minus_input_chr_blacklist_noneg.bigwig")
 H3K27me3_primed <- rtracklayer::import.bw("3_network_dynamics/H3K27me3_Primed_SRR1515137_minus_input_chr_blacklist_noneg.bigwig")
@@ -225,6 +226,7 @@ net_communities_sub <- net_communities[net_communities$p_btwn_cent_cnt > 1 & net
 net_communities_dt <- as.data.table(net_communities_sub) #lookup nodes
 setkey(net_communities_dt, ".id")
 
+#Used in TAD community overlap analysis
 saveRDS(net_communities_dt, "/media/chovanec/My_Passport/CHiC_naive_primed/TAD/net_communities_dt.rds")
 
 

@@ -247,20 +247,6 @@ get_interaction_counts <- function(node_IDs, network, lookup_dt, p=7,
 
               freq_list[["ID"]] <- paste(node_IDs[[r]], collapse = ";")
 
-              #the osn oe/b contacting a baited promoter and add the baited genes
-              #keeping in baited OSN, so need to annotate oe genes too;
-              #but we don't care about these, only about baited genes
-
-              #seperate out interacting fragments in naive and in primed (keeping shared in both)
-              #seperate on origin
-              # intr_frag_primed <- c(int_ends_origin[,1][int_ends_origin[,3] %in% c("primed", "naive_primed")],
-              #                       int_ends_origin[,2][int_ends_origin[,3] %in% c("primed", "naive_primed")])
-              #
-              # intr_frag_naive <- c(int_ends_origin[,1][int_ends_origin[,3] %in% c("naive", "naive_primed")],
-              #                      int_ends_origin[,2][int_ends_origin[,3] %in% c("naive", "naive_primed")])
-
-
-
 
               #get gene and expression for each interacting hindiii
               if(type == "expression"){

@@ -3,13 +3,15 @@ library(rtracklayer)
 library(regioneR)
 library(data.table)
 library(ggpubr)
+library(BSgenome.Hsapiens.UCSC.hg38)
+library(grid)
 
 source("network_tads_functions.R")
 source("network_dynamics_functions.R")
 
 #requires "BSgenome.Hsapiens.UCSC.hg38" to be installed
 
-#needed to edit plot.permTestResultsList (submitted pull request)
+#needed to edit plot.permTestResultsList (submitted pull request, newest version probably fine)
 source("plot.permTestResults.R")
 source("plot.permTestResultsList.R")
 
@@ -19,7 +21,7 @@ naive_tads <- import("4_network_TADs/naive_hESC-1_exact_TADs_5000_25000.washu_so
 primed_tads <- import("4_network_TADs/primed_hESC-1_exact_TADs_5000_25000.washu_sorted.bed")
 
 
-net_communities_dt <- readRDS("4_network_TADs/net_communities_dt.rds")
+net_communities_dt <- readRDS("3_network_dynamics/net_communities_dt.rds")
 hindiii_lookup_dt <- readRDS("4_network_TADs/hindiii_coord.rds")
 
 #Make a gr with community data
@@ -29,24 +31,29 @@ com_gr_list <- apply(net_communities_dt, 1, function(x){
   return(com_gr)
 })
 
+#Remove alt chromosomes
 com_gr_all <- do.call("c", com_gr_list)
+seqlevels(com_gr_all) <- setdiff(seqlevels(com_gr_all), c("chrY", "chrMT"))
+
+hg38_ref <- BSgenome.Hsapiens.UCSC.hg38
+sequences_to_keep <- paste0("chr", c(1:22, "X"))
+hg38 <- keepBSgenomeSequences(hg38_ref, sequences_to_keep)
 
 
 set.seed(3)
-naive_tad_pt <- permTest(A=naive_tads, ntimes=500, randomize.function=randomizeRegions, 
+naive_tad_pt <- permTest(A=naive_tads, B=com_gr_all, ntimes=500, randomize.function=randomizeRegions, 
                          genome="hg38", allow.overlaps=TRUE, per.chromosome=TRUE,
-                         evaluate.function = tco_median, hindiii_lookup_dt=hindiii_lookup_dt, 
-                         B=com_gr_all, verbose=TRUE, mc.cores=7, mc.set.seed=FALSE)
+                         evaluate.function=tco_median)
 
-primed_tad_pt <- permTest(A=primed_tads, ntimes=500, randomize.function=randomizeRegions, 
+primed_tad_pt <- permTest(A=primed_tads, B=com_gr_all, ntimes=500, randomize.function=randomizeRegions, 
                           genome="hg38", allow.overlaps=TRUE, per.chromosome=TRUE,
-                          evaluate.function = tco_median, hindiii_lookup_dt=hindiii_lookup_dt, 
-                          B=com_gr_all, verbose=TRUE, mc.cores=7, mc.set.seed=FALSE)
+                          evaluate.function=tco_median)
+
 
 #make plots
 pdf("4_network_TADs/primed_tad_permtest.pdf", width = 5, height = 5)
 plot(primed_tad_pt, xlim=c(55, 85))
-new.grid()
+grid.newpage()
 plot(naive_tad_pt, xlim=c(55, 85))
 dev.off()
 
@@ -60,8 +67,8 @@ primed_percentage <- tads_community_overlap(net_communities_dt$nodes, primed_tad
 #need to randomly shuffle tad coordinates
 set.seed(3)
 mc.set.seed <- FALSE
-naive_tads_random <- regioneR::randomizeRegions(naive_tads, genome="hg38", allow.overlaps=TRUE, per.chromosome=TRUE)
-primed_tads_random <- regioneR::randomizeRegions(primed_tads, genome="hg38", allow.overlaps=TRUE, per.chromosome=TRUE)
+naive_tads_random <- regioneR::randomizeRegions(naive_tads, genome=hg38, allow.overlaps=TRUE, per.chromosome=TRUE)
+primed_tads_random <- regioneR::randomizeRegions(primed_tads, genome=hg38, allow.overlaps=TRUE, per.chromosome=TRUE)
 
 naive_percentage_random <- tads_community_overlap(net_communities_dt$nodes, naive_tads_random, hindiii_lookup_dt, TRUE)
 primed_percentage_random <- tads_community_overlap(net_communities_dt$nodes, primed_tads_random, hindiii_lookup_dt, TRUE)

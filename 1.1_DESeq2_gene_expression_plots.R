@@ -54,12 +54,12 @@ plot_subnetwork_expression <- function(net_all_s, net_number, gene_regex){
 
 
 plot_subnetwork_expression(net_all_s, 2609, "HIST")
-ggsave("volcano_hist_10_subnet.pdf", width = 4, height = 4)
+ggsave("1_DESeq2_gene_expression/volcano_hist_10_subnet.pdf", width = 4, height = 4)
 plot_subnetwork_expression(net_all_s, 2387, "PCDH")
-ggsave("volcano_pcdh_10_subnet.pdf", width = 4, height = 4)
+ggsave("1_DESeq2_gene_expression/volcano_pcdh_10_subnet.pdf", width = 4, height = 4)
 
 plot_subnetwork_expression(net_all_s, 1233, "^KRT\\d")
-ggsave("volcano_krt_10_subnet.pdf", width = 4, height = 4)
+ggsave("1_DESeq2_gene_expression/volcano_krt_10_subnet.pdf", width = 4, height = 4)
 
 plot_subnetwork_expression(net_all_s, 749, "^OR\\d")
-ggsave("volcano_or_10_subnet.pdf", width = 4, height = 4)
+ggsave("1_DESeq2_gene_expression/volcano_or_10_subnet.pdf", width = 4, height = 4)
