@@ -5,7 +5,7 @@ library(readr)
 library(data.table)
 library(ggforce)
 library(ggpubr)
-# library(tidyr)
+library(GenomicRanges)
 library(gplots)
 library(UpSetR)
 library(eulerr)
@@ -685,45 +685,61 @@ dev.off()
   
 
 #Barplots / Upset plots --------------------------------------------------------
+#only interacting enhancers
 
-#mark shared enhancers
-pn_overlaps <- findOverlaps(Primed_enh, Naive_enh)
-mcols(Primed_enh)$ID <- "p"
-mcols(Primed_enh)$ID[unique(queryHits(pn_overlaps))] <- "s"
-mcols(Naive_enh)$ID <- "n"
-mcols(Naive_enh)$ID[unique(subjectHits(pn_overlaps))] <- "s"
-#simple enhancer only plot
+links_nodes_cat_col_coord_deb2b <- readRDS("/media/chovanec/My_Passport/CHiC_naive_primed/network/network_analysis/links_nodes_cat_col_coord_deb2b_20190829.rds")
+links_all <- links_nodes_cat_col_coord_deb2b$links
+nodes_all <- links_nodes_cat_col_coord_deb2b$nodes
 
-expressionInput_enh <- c(Naive = sum((mcols(Naive_enh)$ID == "n")*1), 
-                         Primed = sum((mcols(Primed_enh)$ID == "p")*1), 
-                         Shared = 0,
-                         `Naive&Shared` = sum((mcols(Naive_enh)$ID == "s")*1), 
-                         `Primed&Shared` = sum((mcols(Primed_enh)$ID == "s")*1))
+interacting_nodes <- unique(as.character(nodes_all$ID))
 
-plot_enh_df <- fromExpression(expressionInput_enh)
+naive_interacting <- unique(c(links_all$b_ID[links_all$origin == "naive"], 
+                              links_all$oe_ID[links_all$origin == "naive"]))
+primed_interacting <- unique(c(links_all$b_ID[links_all$origin == "primed"], 
+                               links_all$oe_ID[links_all$origin == "primed"]))
 
-pdf("7_enhancers/enhancer_overlap.pdf", 
+
+
+#need coordinates to overlap with enhancers
+interacting_hindiii_gr <- hindiii_gr[hindiii_gr$ID %in% interacting_nodes]
+
+interacting_naive_enh_ovlp <- findOverlaps(Naive_enh, interacting_hindiii_gr)
+interacting_primed_enh_ovlp <- findOverlaps(Primed_enh, interacting_hindiii_gr)
+Naive_enh_int <- Naive_enh[queryHits(interacting_naive_enh_ovlp)]
+Primed_enh_int <- Primed_enh[queryHits(interacting_primed_enh_ovlp)]
+
+
+
+expressionInput_int_se <- c(Naive = table(Naive_enh_int $ID[Naive_enh_int$type == "SE"])[["n"]], 
+                            Primed = table(Primed_enh_int$ID[Primed_enh_int$type == "SE"])[["p"]], 
+                            Shared = 0,
+                            `Naive&Shared` = table(Naive_enh_int $ID[Naive_enh_int$type == "SE"])[["s"]], 
+                            `Primed&Shared` = table(Primed_enh_int$ID[Primed_enh_int$type == "SE"])[["s"]])
+
+plot_int_se_df <- fromExpression(expressionInput_int_se)
+pdf("7_enhancers/SE_np_overlap_interacting_only.pdf", 
     onefile=FALSE, width = 4, height = 4)
-upset(plot_enh_df, nsets = 6, keep.order = TRUE,order.by = "freq",
+upset(plot_int_se_df, nsets = 3, keep.order = TRUE, #order.by = "freq",
+      point.size = 2.5, line.size = 1.5, 
+      mainbar.y.label = "SE Intersections")
+dev.off()
+
+expressionInput_int_enh <- c(Naive = sum((mcols(Naive_enh_int)$ID == "n")*1), 
+                             Primed = sum((mcols(Primed_enh_int)$ID == "p")*1), 
+                             Shared = 0,
+                             `Naive&Shared` = sum((mcols(Naive_enh_int)$ID == "s")*1), 
+                             `Primed&Shared` = sum((mcols(Primed_enh_int)$ID == "s")*1))
+
+plot_int_enh_df <- fromExpression(expressionInput_int_enh)
+
+pdf("7_enhancers/enhancer_overlap_interacting_only.pdf", 
+    onefile=FALSE, width = 4, height = 4)
+upset(plot_int_enh_df, nsets = 6, keep.order = TRUE,order.by = "freq",
       point.size = 2.5, line.size = 1.5, 
       mainbar.y.label = "Enhancer Intersections")
 dev.off()
 
-#Overlap of SE -----------------------------------------------------------------
 
-expressionInput_se <- c(Naive = table(Naive_enh$ID[Naive_enh$type == "SE"])[["n"]], 
-                        Primed = table(Primed_enh$ID[Primed_enh$type == "SE"])[["p"]], 
-                        Shared = 0,
-                        `Naive&Shared` = table(Naive_enh$ID[Naive_enh$type == "SE"])[["s"]], 
-                        `Primed&Shared` = table(Primed_enh$ID[Primed_enh$type == "SE"])[["s"]])
-
-plot_se_df <- fromExpression(expressionInput_se)
-pdf("7_enhancers//SE_np_overlap.pdf", 
-    onefile=FALSE, width = 4, height = 4)
-upset(plot_se_df, nsets = 3, keep.order = TRUE, #order.by = "freq",
-      point.size = 2.5, line.size = 1.5, 
-      mainbar.y.label = "SE Intersections")
-dev.off()
 
 
 
