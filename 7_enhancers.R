@@ -9,6 +9,8 @@ library(GenomicRanges)
 library(gplots)
 library(UpSetR)
 library(eulerr)
+library(grid)
+library(tidyr)
 
 source("network_OSN_functions.R")
 source("network_enhancer_class.R")
@@ -17,7 +19,7 @@ source("network_enhancers_functions.R")
 
 
 #Determine distance of neighbouring fragments to merge by ROSE -----------------
-
+  
 #https://github.com/taoliu/MACS
 #https://charlesjb.github.io/How_to_import_narrowPeak/
 

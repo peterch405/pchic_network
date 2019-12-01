@@ -14,7 +14,7 @@ Ensure that you have packrat installed. It can be installed by running the follo
 
 `install.packages("renv")`
 
-When you open the project `CHiC_network.Rproj` in RStudio restore the Packrat snapshot:
+When you open the project `CHiC_network.Rproj` in RStudio, first restore the renv snapshot by running:
 
 `renv::restore()`
 
