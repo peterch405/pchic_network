@@ -8,7 +8,7 @@ node_enhancer_summary <- function(root_node, nodes_dt, lookup_dt, score_diff=2){
 
   
   #TODO how do you export an s4 class for foreach?
-  source("/media/chovanec/My_Passport/CHiC_naive_primed/scripts/CHiC/network_enhancer_class.R")
+  source("network_enhancer_class.R")
   
   lvls <- c("Active", "Polycomb Repressed", "Bivalent", 
             "Heterochromatin Repressed", "H3K4me1", "Mixed",

@@ -62,6 +62,7 @@ chromhmm_enh_OSN_lookup <- readRDS("7_enhancers/chromhmm_enh_OSN_lookup_20190112
 
 links_nodes_cat_col_coord_deb2b <- readRDS("2_network_make/links_nodes_cat_col_coord_deb2b_20190829.rds")
 nodes_all <- links_nodes_cat_col_coord_deb2b$nodes
+links_all <- links_nodes_cat_col_coord_deb2b$links
 
 #Annotated by transcript gene names
 nodes_all_prot <- readRDS("7_enhancers/nodes_all_prot.rds")
@@ -687,11 +688,11 @@ dev.off()
 #Barplots / Upset plots --------------------------------------------------------
 #only interacting enhancers
 
-links_nodes_cat_col_coord_deb2b <- readRDS("/media/chovanec/My_Passport/CHiC_naive_primed/network/network_analysis/links_nodes_cat_col_coord_deb2b_20190829.rds")
-links_all <- links_nodes_cat_col_coord_deb2b$links
-nodes_all <- links_nodes_cat_col_coord_deb2b$nodes
-
 interacting_nodes <- unique(as.character(nodes_all$ID))
+
+primed_int_nodes <- unique(c(links_all$b_ID[links_all$origin == "primed"], links_all$oe_ID[links_all$origin == "primed"]))
+naive_int_nodes <- unique(c(links_all$b_ID[links_all$origin == "naive"], links_all$oe_ID[links_all$origin == "naive"]))
+
 
 naive_interacting <- unique(c(links_all$b_ID[links_all$origin == "naive"], 
                               links_all$oe_ID[links_all$origin == "naive"]))
@@ -699,21 +700,29 @@ primed_interacting <- unique(c(links_all$b_ID[links_all$origin == "primed"],
                                links_all$oe_ID[links_all$origin == "primed"]))
 
 
+#mark shared enhancers
+pn_overlaps <- findOverlaps(Primed_enh, Naive_enh)
+mcols(Primed_enh)$ID <- "p"
+mcols(Primed_enh)$ID[unique(queryHits(pn_overlaps))] <- "s"
+mcols(Naive_enh)$ID <- "n"
+mcols(Naive_enh)$ID[unique(subjectHits(pn_overlaps))] <- "s"
 
 #need coordinates to overlap with enhancers
-interacting_hindiii_gr <- hindiii_gr[hindiii_gr$ID %in% interacting_nodes]
+primed_interacting_hindiii_gr <- hindiii_gr[hindiii_gr$ID %in% primed_int_nodes]
+naive_interacting_hindiii_gr <- hindiii_gr[hindiii_gr$ID %in% naive_int_nodes]
 
-interacting_naive_enh_ovlp <- findOverlaps(Naive_enh, interacting_hindiii_gr)
-interacting_primed_enh_ovlp <- findOverlaps(Primed_enh, interacting_hindiii_gr)
+
+interacting_naive_enh_ovlp <- findOverlaps(Naive_enh, naive_interacting_hindiii_gr)
+interacting_primed_enh_ovlp <- findOverlaps(Primed_enh, primed_interacting_hindiii_gr)
 Naive_enh_int <- Naive_enh[queryHits(interacting_naive_enh_ovlp)]
 Primed_enh_int <- Primed_enh[queryHits(interacting_primed_enh_ovlp)]
 
 
 
-expressionInput_int_se <- c(Naive = table(Naive_enh_int $ID[Naive_enh_int$type == "SE"])[["n"]], 
+expressionInput_int_se <- c(Naive = table(Naive_enh_int$ID[Naive_enh_int$type == "SE"])[["n"]], 
                             Primed = table(Primed_enh_int$ID[Primed_enh_int$type == "SE"])[["p"]], 
                             Shared = 0,
-                            `Naive&Shared` = table(Naive_enh_int $ID[Naive_enh_int$type == "SE"])[["s"]], 
+                              `Naive&Shared` = table(Naive_enh_int$ID[Naive_enh_int$type == "SE"])[["s"]], 
                             `Primed&Shared` = table(Primed_enh_int$ID[Primed_enh_int$type == "SE"])[["s"]])
 
 plot_int_se_df <- fromExpression(expressionInput_int_se)

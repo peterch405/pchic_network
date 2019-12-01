@@ -7,11 +7,16 @@ ___
 
 ## Installing dependencies
 
-This repository is an RStudio project that uses Packrat for package management and reproducibility. The versions included in Packrat are not the same used in the paper. However, initial testing indicates that the results produced with newer package versions are the same.
+
+This repository is an RStudio project that relies on renv for package management to ensure reproducibility. The versions included in renv are not the same as used during the writing of the paper. However, initial testing indicates that the results produced with newer package versions are identical.
+
+Ensure that you have packrat installed. It can be installed by running the following command:
+
+`install.packages("renv")`
 
 When you open the project `CHiC_network.Rproj` in RStudio restore the Packrat snapshot:
 
-`packrat::restore()`
+`renv::restore()`
 
 
 ## Getting data

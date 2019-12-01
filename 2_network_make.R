@@ -91,3 +91,24 @@ igraph::write_graph(net_out_3_deb2b, "2_network_make/net_all_3_trans_s_deb2b_201
 
 saveRDS(links_nodes_3_cat_col_deb2b,"2_network_make/links_nodes_3_cat_col_coord_deb2b_20190829.rds")
 
+
+#Make supplemental table 1 ------------------------------------------------------
+
+network_table <- as_long_data_frame(net_out_deb2b)
+hindiii_lookup <- read_delim("7_enhancers/hindiii_lookup.tab", 
+                             "\t", escape_double = FALSE, col_names = FALSE, 
+                             trim_ws = TRUE)
+names(hindiii_lookup) <- c("chrom", "start", "end", "ID")
+
+hindiii_lookup$coord <- apply(hindiii_lookup, 1, function(x) paste(x["chrom"], ":", x["start"], "-", x["end"], collapse=""))
+hindiii_lookup$coord <- gsub(" ", "", hindiii_lookup$coord)
+
+data.table::setnames(network_table, "from_name", "ID")
+network_table_2 <- merge(network_table, hindiii_lookup[c("ID", "coord")], by="ID")
+data.table::setnames(network_table_2, "coord", "from_coord")
+data.table::setnames(network_table_2, "ID", "from_name")
+data.table::setnames(network_table_2, "to_name", "ID")
+network_table_2 <- merge(network_table_2, hindiii_lookup[c("ID", "coord")], by="ID")
+data.table::setnames(network_table_2, "coord", "to_coord")
+data.table::setnames(network_table_2, "ID", "to_name")
+write.table(network_table_2, "2_network_make/S1_table.tsv", quote = FALSE, sep = "\t", row.names = FALSE, col.names = TRUE)

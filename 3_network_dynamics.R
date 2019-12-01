@@ -227,6 +227,6 @@ net_communities_dt <- as.data.table(net_communities_sub) #lookup nodes
 setkey(net_communities_dt, ".id")
 
 #Used in TAD community overlap analysis
-saveRDS(net_communities_dt, "/media/chovanec/My_Passport/CHiC_naive_primed/TAD/net_communities_dt.rds")
+saveRDS(net_communities_dt, "3_network_dynamics/net_communities_dt.rds")
 
 

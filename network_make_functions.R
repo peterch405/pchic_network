@@ -486,6 +486,8 @@ make_network <- function(links_nodes, np_summary_out, directed=TRUE, save_nontra
   #Make distance edge weights
   E(net_out)$weight <- E(net_out)$distance
   
+  E(net_out)$distance_log2 <- log2(E(net_out)$distance)
+  
   if(!is.na(save_nontrans_net)){
     saveRDS(net_out_notrans, save_nontrans_net)
   }
