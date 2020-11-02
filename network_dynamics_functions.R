@@ -630,3 +630,103 @@ nodes2granges <- function(nodes, lookup_dt){
   return(gr)
 }
 
+
+#' Summarise network dynamics, edge node changes between cells at the level of 
+#' communities (used for TAD overlap analysis)
+#' 
+#' @param net_all_s igraph network
+#' @return data.table with summary results
+community_level_dynamics <- function(net_all_s){
+  all_subgraphs <- decompose.graph(net_all_s)
+  pb <- tkProgressBar("Progress bar", "Some information in %",
+                      0, length(all_subgraphs), 0, width=300)
+  
+  
+  all_net_list <- list()
+  moduty <- list()
+  subnet_communities <- list()
+  subnet_comm <- list()
+  for(sg in seq_along(all_subgraphs)){
+    sub_graph <- all_subgraphs[[sg]]
+    # distance used as edge weight
+    comms <- multilevel.community(as.undirected(sub_graph), weights = E(sub_graph)$weight)
+    
+    moduty[[sg]] <- data.frame(mod=modularity(comms), groups=length(comms), e=length(E(sub_graph)), n=length(V(sub_graph)))
+    
+    #naive or primed subnetwork
+    p_net <- cell_net(all_subgraphs[[sg]], "naive")
+    n_net <- cell_net(all_subgraphs[[sg]], "primed")
+    
+    V(p_net)$btwn.cent <- betweenness(as.undirected(p_net))
+    V(n_net)$btwn.cent <- betweenness(as.undirected(n_net))
+    
+    
+    #add also naive and primed specific counts
+    if(modularity(comms) >= 0.7){ #if modularity is high else just take entire netowork
+      
+      #loop through groups identified, save nodes within and give unique name to subnetwork
+      for(c in seq_along(comms)){
+        
+        p_del <- delete.vertices(p_net, !(V(p_net)$name %in% comms[[c]]))
+        n_del <- delete.vertices(n_net, !(V(n_net)$name %in% comms[[c]]))
+        
+        #include Robustness measure
+        
+        subnet_communities[[paste(sg, c, sep="_")]] <- data.frame(nodes=paste(comms[[c]], collapse = ";"),
+                                                                  naive_n=vcount(n_del),
+                                                                  primed_n=vcount(p_del),
+                                                                  naive_e=ecount(n_del),
+                                                                  primed_e=ecount(p_del),
+                                                                  modul=modularity(comms),
+                                                                  p_btwn_cent=paste(V(p_del)$btwn.cent, collapse = ";"),
+                                                                  n_btwn_cent=paste(V(n_del)$btwn.cent, collapse = ";"))
+        #simple list for asigning in network
+        subnet_comm[[paste(sg, c, sep="_")]] <- comms[[c]]
+        
+        
+      }
+    }else{
+      subnet_communities[[as.character(sg)]] <- data.frame(nodes=paste(V(all_subgraphs[[sg]])$name, collapse = ";"),
+                                                           naive_n=vcount(n_net),
+                                                           primed_n=vcount(p_net),
+                                                           naive_e=ecount(n_net),
+                                                           primed_e=ecount(p_net),
+                                                           modul=modularity(comms),
+                                                           p_btwn_cent=paste(V(p_net)$btwn.cent, collapse = ";"),
+                                                           n_btwn_cent=paste(V(n_net)$btwn.cent, collapse = ";"))
+      
+      subnet_comm[[as.character(sg)]] <- V(all_subgraphs[[sg]])$name
+      
+    }
+    #progress bar
+    info <- sprintf("%d%% done", (round(sg/length(all_subgraphs)*100)))
+    setTkProgressBar(pb, sg, sprintf("Outer loop (%s)", info), info)
+    
+  }
+  
+  net_modularity <- plyr::ldply(moduty, rbind)
+  net_modularity$.id <- as.numeric(rownames(net_modularity))
+  
+  net_communities <- plyr::ldply(subnet_communities, rbind)
+  
+  #close progress bar
+  close(pb)
+  
+  
+  #remove nodes with only one central node (low robustness)
+  table(cut(table(as.numeric(unlist(strsplit(as.character(net_communities$p_btwn_cent), ";")))), seq(0,500, 10)))
+  
+  net_communities$p_btwn_cent_cnt <- sapply(strsplit(as.character(net_communities$p_btwn_cent), ";"), function(x) sum((as.numeric(x) > 0)*1))
+  net_communities$n_btwn_cent_cnt <- sapply(strsplit(as.character(net_communities$n_btwn_cent), ";"), function(x) sum((as.numeric(x) > 0)*1))
+  
+  #remove ones with btwn.cent 0 and 1
+  
+  net_communities_sub <- net_communities[net_communities$p_btwn_cent_cnt > 1 & net_communities$n_btwn_cent_cnt > 1,]
+  net_communities_dt <- as.data.table(net_communities_sub) #lookup nodes
+  setkey(net_communities_dt, ".id")
+  
+  #Used in TAD community overlap analysis
+  return(net_communities_dt)
+  
+  
+}

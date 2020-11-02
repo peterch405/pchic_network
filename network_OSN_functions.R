@@ -82,12 +82,54 @@ node_enhancer_summary <- function(root_node, nodes_dt, lookup_dt, score_diff=2){
 
 
 
+# 
+# setClass(Class = "Expression",
+#          slots = c(
+#            intr_fragments = "character",
+#            prot_genes = "character",
+#            naive_fpkm_log2 = "character",
+#            primed_fpkm_log2 = "character",
+#            log2FoldChange = "character",
+#            naive_expr_mean = "numeric",
+#            primed_expr_mean = "numeric",
+#            log2FoldChange_mean = "numeric"),
+#          prototype = list(
+#            intr_fragments = NA_character_,
+#            prot_genes = NA_character_,
+#            naive_fpkm_log2 = NA_character_,
+#            primed_fpkm_log2 = NA_character_,
+#            log2FoldChange = NA_character_,
+#            naive_expr_mean = NA_real_,
+#            primed_expr_mean = NA_real_,
+#            log2FoldChange_mean = NA_real_
+#          )
+# )
+# 
+# 
+# setGeneric("intration_fragments", function(object) standardGeneric("intration_fragments"))
+# setMethod("intration_fragments", "Expression", function(object) object@intration_fragments)
+# 
+# setGeneric("genes", function(object) standardGeneric("genes"))
+# setMethod("genes", "Expression", function(object) object@genes)
+# 
+# 
+# setGeneric("summary", function(object) standardGeneric("summary"))
+# setMethod("summary", "Expression",
+#           function(object) {
+#             
+#           # out <-  data.table(intr_fragments=object@intr_fragments,
+#           #             prot_genes=object@prot_genes, naive_fpkm_log2=object@naive_fpkm_log2,
+#           #             primed_fpkm_log2=object@primed_fpkm_log2, logFoldChange=object@log2FoldChange,
+#           #             naive_expr_mean=object@naive_expr_mean, primed_expr_mean=object@primed_expr_mean,
+#           #             log2FoldChange_mean=object@log2FoldChange_mean)
+#           out <-  data.table(intr_fragments=object@intr_fragments)
+#             return(out)
+#           })
 
-#'
-#' output a summary list of expression values from a data.table lookup
-#'
+
+
 node_expression_summary <- function(search_nodes, lookup_dt, unique_name=NA){
-  
+  #output a summary list of expression values from a data.table lookup
   print(search_nodes)
   if(length(search_nodes) == 0){
     out_list <- list(intr_frag=NA, prot_genes=NA, Naive_mean_fpkm_log2=NA,
@@ -125,6 +167,7 @@ node_expression_summary <- function(search_nodes, lookup_dt, unique_name=NA){
   
   return(out_list)
 }
+
 
 
 
@@ -189,7 +232,7 @@ get_interaction_counts <- function(node_IDs, network, lookup_dt, p=7,
   net_data <- net_data_all[, ..cols]
 
   #Set up parallel end
-  cl <- makeCluster(p)
+  cl <- makeCluster(p, type = "SOCK")
   registerDoSNOW(cl)
 
   #Set up progress bar
@@ -197,7 +240,7 @@ get_interaction_counts <- function(node_IDs, network, lookup_dt, p=7,
   progress <- function(n) setTxtProgressBar(pb, n)
   opts <- list(progress = progress)
 
-  #return a list to keep it more flexible
+  # return a list to keep it more flexible
   net_summary <-
     foreach(r=1:length(node_IDs), #.combine = "rbind",
             #.final = function(x) setNames(x, as.character(node_IDs)),
@@ -205,8 +248,8 @@ get_interaction_counts <- function(node_IDs, network, lookup_dt, p=7,
             .inorder=TRUE, .export = c("node_expression_summary",
                                        "node_enhancer_summary")) %dopar% {
 
-            # for(r in 1:length(node_IDs)){
-              
+          # for(r in 1:length(node_IDs)){
+
               # #doing this from networks is very slow
               # #interaction ends
               # node_edges <- E(network)[from(V(network)[node_IDs[[r]]])]
@@ -260,25 +303,25 @@ get_interaction_counts <- function(node_IDs, network, lookup_dt, p=7,
                 diff_less <- abs(int_ends_origin$score_naive - int_ends_origin$score_primed) < score_diff
                 int_ends_origin$new_origin <- int_ends_origin$origin
                 int_ends_origin$new_origin[less_than_five & diff_less] <- "naive_primed"
-
+                
                 primed_orig <- int_ends_origin$new_origin %in% c("primed", "naive_primed")
                 intr_frag_primed <- c(int_ends_origin$from_name[primed_orig],
                                       int_ends_origin$to_name[primed_orig])
                 naive_orig <- int_ends_origin$new_origin %in% c("naive", "naive_primed")
                 intr_frag_naive <- c(int_ends_origin$from_name[naive_orig],
                                      int_ends_origin$to_name[naive_orig])
-
+                
                 #remove self
                 intr_frag_primed <- intr_frag_primed[!(intr_frag_primed %in% node_IDs[[r]])]
                 intr_frag_naive <- intr_frag_naive[!(intr_frag_naive %in% node_IDs[[r]])]
-
+                
                 naive_list <- data.frame(node_expression_summary(intr_frag_naive,
                                                                  lookup_dt,
                                                                  "naive"))
                 primed_list <- data.frame(node_expression_summary(intr_frag_primed,
                                                                   lookup_dt,
                                                                   "primed"))
-
+                
                 out_data <- cbind(data.frame(freq_list), data.frame(naive_list), 
                                   data.frame(primed_list))
 
@@ -335,20 +378,20 @@ get_interaction_counts <- function(node_IDs, network, lookup_dt, p=7,
   close(pb)
   stopCluster(cl)
 
-  if(type %in% c("expression", "enhancer")){
+  if(type %in% c("expression", "enhancer")){ 
     out <- do.call(rbind.data.frame, net_summary)
     #does something funky, converting string to 1 out <- plyr::ldply(net_summary, rbind)
   }else if(type == "raw"){
-    
+
     #get a vector of gene names to use as list names
     gene_names <- vector("character")
     for(i in seq_along(net_summary)){
       gene_names[i] <- genes(net_summary[[i]])
     }
-    
+
     names(net_summary) <- gene_names
     out <- net_summary
-    
+
   }
 
   return(out)

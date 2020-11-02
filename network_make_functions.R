@@ -1,4 +1,5 @@
 library(igraph)
+library(stringr)
 #rjson required
 
 #'Replace dashes with dots
@@ -323,9 +324,13 @@ categorise_add_data <- function(links_nodes, deseq_genes){
 }
 
 
-
+#' no R palletes contain enough colours for all TADs
+#' and so this function creates n number of rgb colours assigned 
+#' to nodes
+#' 
+#' @param n number of rgb colours to generate
+#' 
 get_spaced_colors <- function(n){
-  #no R palletes contain enough colours for all TADs
   max_value <- 16581375 #255**3
   interval <- as.integer(max_value / n)
   hex_colours <- vector("character", n)
@@ -345,11 +350,17 @@ get_spaced_colors <- function(n){
     # rgb_colours[i] <- paste("rgb(", rgb, ")", sep = "")
     rgb_colours[i] <- rgb
   }
-  return(rgb_colours)
+  return(rgb_colours[1:n])
 }
 
 
 #'  Find equivalent tads and assign the same colour to all
+#'  Important to have same colour for visulisation in Gephi
+#'  
+#'  @param links_nodes list containg two data.frames "links" and "nodes" with all network links and nodes
+#'  
+#'  @return links nodes list same as input format
+#'  
 add_same_tad_colour <- function(links_nodes){
 
   nodes_all <- links_nodes$nodes
@@ -394,9 +405,7 @@ add_same_tad_colour <- function(links_nodes){
   tad_id_eq_col <- tad_id_eq[!(is.na(tad_id_eq$tad_primed) & is.na(tad_id_eq$tad_naive)),]
   tad_id_eq_col[is.na(tad_id_eq_col)] <- "empty"
   
-  colours <- get_spaced_colors(nrow(tad_id_eq_col))
-  
-  tad_id_eq_col$colours <- colours[-1]
+  tad_id_eq_col$colours <- get_spaced_colors(nrow(tad_id_eq_col))
   
   tad_id_eq_col_n <- data.table::as.data.table(tad_id_eq_col)
   data.table::setkey(tad_id_eq_col_n, key="tad_naive")
@@ -410,20 +419,20 @@ add_same_tad_colour <- function(links_nodes){
   tads_p_find <- nodes_all$tad_primed[!is.na(nodes_all$tad_primed)]
   
   
-  nodes_all$color_tad_naive <- "255,255,255"
-  nodes_all$color_tad_naive[!is.na(nodes_all$tad_naive)] <- tad_id_eq_col_n[.(tads_n_find), nomatch = 0L]$colours
-  nodes_all$color_tad_primed <- "255,255,255"
-  nodes_all$color_tad_primed[!is.na(nodes_all$tad_primed)] <- tad_id_eq_col_p[.(tads_p_find), nomatch = 0L]$colours
+  nodes_all$tad_naive_col <- "255,255,255"
+  nodes_all$tad_naive_col[!is.na(nodes_all$tad_naive)] <- tad_id_eq_col_n[.(tads_n_find), nomatch = 0L]$colours
+  nodes_all$tad_primed_col <- "255,255,255"
+  nodes_all$tad_primed_col[!is.na(nodes_all$tad_primed)] <- tad_id_eq_col_p[.(tads_p_find), nomatch = 0L]$colours
   
   
   # tads_n_find <- V(net_all_trans_s)$tad_naive[!is.na(V(net_all_trans_s)$tad_naive)]
   # tads_p_find <- V(net_all_trans_s)$tad_primed[!is.na(V(net_all_trans_s)$tad_primed)]
   # 
-  # V(net_all_trans_s)$color_tad_naive <- "255,255,255"
-  # V(net_all_trans_s)$color_tad_naive[!is.na(V(net_all_trans_s)$tad_naive)]  <- tad_id_eq_col_n[.(tads_n_find), nomatch = 0L]$colours
+  # V(net_all_trans_s)$tad_naive_col <- "255,255,255"
+  # V(net_all_trans_s)$tad_naive_col[!is.na(V(net_all_trans_s)$tad_naive)]  <- tad_id_eq_col_n[.(tads_n_find), nomatch = 0L]$colours
   # 
-  # V(net_all_trans_s)$color_tad_primed <- "255,255,255"
-  # V(net_all_trans_s)$color_tad_primed[!is.na(V(net_all_trans_s)$tad_primed)]  <- tad_id_eq_col_p[.(tads_p_find), nomatch = 0L]$colours
+  # V(net_all_trans_s)$tad_primed_col <- "255,255,255"
+  # V(net_all_trans_s)$tad_primed_col[!is.na(V(net_all_trans_s)$tad_primed)]  <- tad_id_eq_col_p[.(tads_p_find), nomatch = 0L]$colours
   
   # write_graph(net_all_trans_s, "/media/chovanec/My_Passport/CHiC_naive_primed/network/network_analysis/most_diff_networks/net_all_trans_s_cluster_reduced_tadcolor.graphml", 
   #             format = "graphml")
@@ -432,22 +441,67 @@ add_same_tad_colour <- function(links_nodes){
 }
 
 
-#'#Make an Igraph network (retaining trans interactions)
-#'Add IDs for all the subnetworks so it can be linked back to dynimics analysis
+#' Create a new column with node chromosome identity and assign colours that will
+#' be conserved between different generated networks, 
+#' i.e. chr1 will always be the same colour
+#' 
+#' @param links_nodes list containg two data.frames "links" and "nodes" with all network links and nodes
+#' @param custom_col a vector of rgb colours to use instead of generated
+#' 
+#' @return links nodes list same as input format
+#' 
+chromosome_colour <- function(links_nodes, custom_col=NA){
+  nodes_all <- links_nodes$nodes
+  
+  nodes_all$chrom <- gsub("_.*", "", nodes_all$ID)
+  chrom_num <- length(unique(nodes_all$chrom))
+  # natural sort chromosomes so will always be in same order
+  chrom_names <- stringr::str_sort(unique(nodes_all$chrom), numeric = TRUE)
+  if(is.na(custom_col)){
+    chrom_lookup_list <- split(get_spaced_colors(chrom_num), chrom_names)
+  } else{
+    chrom_lookup_list <- split(custom_col, chrom_names)
+  }
+  # create env lookup
+  chrom_lookup <- list2env(chrom_lookup_list)
+  
+  nodes_all$chrom_col <- unname(sapply(nodes_all$chrom, function(x) chrom_lookup[[x]]))
+  
+  return(list(nodes=nodes_all, links=links_nodes$links))
+}
+
+
+#' Make an Igraph network (retaining trans interactions)
+#' Add IDs for all the subnetworks so it can be linked back to dynimics analysis
 #'
-make_network <- function(links_nodes, np_summary_out, directed=TRUE, save_nontrans_net=NA){
+#' Invert distances as ForceAtlas2 interprets higher edge weight as a stronger connection 
+#' instead of a penalty assign to weight edge attribute. Can keep CHiCAGO scores as they are
+#'
+#' 
+#' @param links_nodes list containg two data.frames "links" and "nodes" with all network links and nodes
+#' @param np_summary_out out path, if this step has been run before, use previous output file (step takes long to run)
+#' @param directed make a directed network
+#' @param save_nontrans_net path to save an RDS of network without trans interactions, used for other analysis steps
+#' 
+#' @return a complete igraph network with cis and trans interactions
+#'
+make_network <- function(links_nodes, np_summary_out, directed=TRUE, save_nontrans_net=NA,
+                         chrom_colours=NA){
+
+  # add chromosome colour
+  links_nodes <- chromosome_colour(links_nodes, chrom_colours)  
   
   links_all_trans <- links_nodes$links
   links_all_trans$count <- 1
-  #mark trans as 1 so distance can be used a weight
+  # mark trans as 1 so distance can be used a weight
   links_all_trans$distance[is.na(links_all_trans$distance)] <- 1
-  #drop score and score2 columns and only use score_naive score_primed
+  # drop score and score2 columns and only use score_naive score_primed
   links_all_trans <- links_all_trans[,!(names(links_all_trans) %in% c("score", "score2"))]
   
   links_all <- links_nodes$links[!is.na(links_nodes$links$distance),]
   links_all <- links_all[,!(names(links_all) %in% c("score", "score2"))]
   links_all$count <- 1
- 
+  
   #keep max CHiCAGO score because of b2b merging
   edge_simplify <- list(score_naive="max", score_primed="max", oe_genes="first", 
                         b_genes="first", protein_oe_genes="first", 
@@ -483,10 +537,16 @@ make_network <- function(links_nodes, np_summary_out, directed=TRUE, save_nontra
   net_out <- add_subnet(net_all_trans_s, np_summary, all_subgraphs)
   net_out_notrans <- add_subnet(net_all_s, np_summary, all_subgraphs)
   
-  #Make distance edge weights
-  E(net_out)$weight <- E(net_out)$distance
-  
+  # Make distance edge weights
   E(net_out)$distance_log2 <- log2(E(net_out)$distance)
+  
+  E(net_out)$distance_log2_inverse <- abs(E(net_out)$distance_log2-(max(E(net_out)$distance_log2+1)))
+  
+  E(net_out)$weight <- E(net_out)$distance_log2_inverse
+  
+  # CHiCAGO average score, can also be used for weights
+  E(net_out)$score_average <- rowMeans(data.frame(E(net_out)$score_naive, 
+                                                  E(net_out)$score_primed), na.rm=TRUE)
   
   if(!is.na(save_nontrans_net)){
     saveRDS(net_out_notrans, save_nontrans_net)
@@ -498,7 +558,7 @@ make_network <- function(links_nodes, np_summary_out, directed=TRUE, save_nontra
 
 #' incorporate coordinates produced by gephi layout into igraph network
 #' This requires that the network has been produced imported into gephi and
-#' then its coordinates exported in json format. This json file can the be used here
+#' then its coordinates exported in json format. This json file can then be used here
 add_layout_coordinate <- function(links_nodes, gephi_json){
   
   graph_json <- rjson::fromJSON(file=gephi_json)
@@ -517,5 +577,7 @@ add_layout_coordinate <- function(links_nodes, gephi_json){
   
   return(list(nodes=nodes_all, links=links_nodes$links))
 }
+
+
 
 

@@ -51,28 +51,29 @@ def main():
             'Unknown': 7,
             'H3K4me1': 8}
 
-    collapse_dict = {'E1': 'Active', 'E2': 'Active',
-                    'E3': 'Active', 'E5': 'Active', 'E6': 'Active', 'E7': 'Bivalent',
-                    'E4': 'Active',
-                    'E8': 'Polycomb Repressed', 'E9': 'Bivalent',
-                    'E10': 'H3K4me1',
-                    'E11': 'H3K4me1',
-                    'E12': 'Unclassified', 'E13': 'Heterochromatin Repressed',
-                    'E14': 'Background', 'E15': 'Heterochromatin Repressed', 'E16': 'Background'}
+    collapse_dict = {'E1': 'Background', 'E2': 'Background',
+                 'E4': 'Background',
+                 'E3': 'Heterochromatin Repressed', 'E5': 'Heterochromatin Repressed', 
+                 'E6': 'Unclassified', 
+                 'E7': 'Active', 'E8': 'Active', 'E9': 'Active', 'E10': 'Active',
+                 'E11': 'Active', 'E12': 'Active', 
+                 'E13': 'H3K4me1',
+                 'E14': 'Unclassified', 
+                 'E15': 'Bivalent', 'E16': 'Polycomb Repressed'}
 
     #################################################################################
     #output files paths
     #################################################################################
 
-    naive_out_path = '0_network_data_preparation/naive_intract_wchip_20181218.txt'
-    primed_out_path = '0_network_data_preparation/primed_intract_wchip_20181218.txt'
+    naive_out_path = '0_network_data_preparation/naive_intract_wchip_20200911.txt'
+    primed_out_path = '0_network_data_preparation/primed_intract_wchip_20200911.txt'
 
-    naive_3_out_path = '0_network_data_preparation/naive_3_intract_wchip_20181218.txt'
-    primed_3_out_path = '0_network_data_preparation/primed_3_intract_wchip_20181218.txt'
+    naive_3_out_path = '0_network_data_preparation/naive_3_intract_wchip_20200911.txt'
+    primed_3_out_path = '0_network_data_preparation/primed_3_intract_wchip_20200911.txt'
 
-    #the nodes are the same for all scores
-    naive_nodes_out = '0_network_data_preparation/naive_nodes_wchip_20181218.txt'
-    primed_nodes_out = '0_network_data_preparation/primed_nodes_wchip_20181218.txt'
+    #the nodes are the same for all scores (whole genome HindIII)
+    naive_nodes_out = '0_network_data_preparation/naive_nodes_wchip_20200911.txt'
+    primed_nodes_out = '0_network_data_preparation/primed_nodes_wchip_20200911.txt'
 
     #State bed files output
     naive_states_bed = '0_network_data_preparation/naive_16_segments_hindiii.bed'

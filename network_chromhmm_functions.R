@@ -21,7 +21,7 @@ plot_emmisions <- function(emissions_path, out_path=NA, col_names=NA){
     slice_by <- col_names
   }
   
-  m_h16a <- m_h16a[slice_by,,drop=FALSE]
+  # m_h16a <- m_h16a[slice_by,,drop=FALSE]
   
   col_ramp <- colorRampPalette(c('white', 'blue'))(16)
   
@@ -39,6 +39,25 @@ plot_emmisions <- function(emissions_path, out_path=NA, col_names=NA){
     dev.off()
   }
   
+}
+
+#' Plot number of bind within each state
+#' 
+#' @param path to segments bed file output from ChromHMM
+#' @param names names for each state E1..E16
+#' @param plot_path where to save the plot
+#' 
+plot_state_frequency <- function(state_bed, names, plot_path){
+  naive_states <- import.bed(state_bed)
+  
+  freq <- data.frame(table(naive_states$name))
+  freq$names <- names
+  levels(freq$Var1) <- stringr::str_sort(levels(freq$Var1), numeric = TRUE)
+  
+  ggplot(freq, aes(x=Var1, y=Freq, fill=names)) +
+    geom_bar(stat = "identity") +
+    theme_pubr()
+  ggsave(plot_path, width=8, height = 8)
 }
 
 
@@ -65,13 +84,14 @@ move_to_first <- function(in_vect, move_which){
 #' @param percentage of_total is the percentage of all fragments before subseting
 #' of_subset is the percentage within the subset dataset
 #' @param state2plot which states from the first column to plot
+#' @param low_counts remove counts lower than this when col_filter is left
 #' @return Saves a pdf to out_path
 state_transition_plot <- function(two_col_data, out_path=NULL, percentage=c("of_total","of_subset"),
                                   state2plot=c("Active", "Background", "Bivalent", 
                                                "H3K4me1", "Heterochromatin Repressed", 
                                                "Polycomb Repressed", "Mixed", "Unclassified"),
                                   lvls=NULL, state_colours=NULL, col_filter=c("left", "right", "other"),
-                                  table_size=7){
+                                  table_size=7, low_counts=0){
   
   #keep only naive active/selected state and see what they go to
   #by first column
@@ -126,26 +146,28 @@ state_transition_plot <- function(two_col_data, out_path=NULL, percentage=c("of_
                             n = (table(factor(tp_data[,2], levels = lvls))/
                                    table(factor(two_col_data[,2], levels = lvls)))*100))
   }
-  
+
   # print(box_txt_naive)
   # print(table(tp_data[,1], tp_data[,2]))
   
   #need to remove the 0 column so the min_lwd will be dividing by 0
   count_tbl <- table(tp_data[,1], tp_data[,2])
   
-  print(count_tbl)
+
   #which column is 0?
   if(col_filter %in% c("right", "other")){
     count_plot <- count_tbl+0.1
     remove_cols_rows <-NA
   }
   if(col_filter == "left"){
-    remove_cols_rows <- names(which(colSums(count_tbl) == 0))
+    remove_cols_rows <- names(which(colSums(count_tbl) < low_counts))
+    # Don't remove state to plot
+    remove_cols_rows <- remove_cols_rows[!remove_cols_rows == state2plot]
     count_plot <- count_tbl[!(lvls %in% remove_cols_rows),!(lvls %in% remove_cols_rows)]
+    count_plot <- count_plot+0.1
   }
   
-  # return(count_plot)
-  
+
   
   print(remove_cols_rows)
   
@@ -198,4 +220,5 @@ state_transition_plot <- function(two_col_data, out_path=NULL, percentage=c("of_
   if(!is.null(out_path)){
     dev.off()
   }
+  return(as.data.frame(count_tbl))
 }

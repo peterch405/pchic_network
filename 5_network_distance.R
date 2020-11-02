@@ -2,23 +2,24 @@ library(readr)
 library(tidyr)
 library(plyr)
 library(ComplexHeatmap)
+library(ggplot2)
 
 #interactions with chip-seq data -----------------------------------------------
 
-naive_intract <- read_delim("0_network_data_preparation/naive_intract_wchip_20181218.txt", 
+naive_intract <- read_delim("0_network_data_preparation/naive_intract_wchip_20200911.txt", 
                             "\t", escape_double = FALSE, col_names = TRUE, 
                             trim_ws = TRUE)
 
-primed_intract <- read_delim("0_network_data_preparation//primed_intract_wchip_20181218.txt", 
+primed_intract <- read_delim("0_network_data_preparation/primed_intract_wchip_20200911.txt", 
                              "\t", escape_double = FALSE, col_names = TRUE, 
                              trim_ws = TRUE)
 
 #need to fill chip-seq information from nodes not from interactions as nodes may still have mark even without interaction!
 
-naive_nodes <- read_delim("0_network_data_preparation/naive_nodes_wchip_20181218.txt", 
+naive_nodes <- read_delim("0_network_data_preparation/naive_nodes_wchip_20200911.txt", 
                           "\t", escape_double = FALSE, trim_ws = TRUE)
 
-primed_nodes <- read_delim("0_network_data_preparation/primed_nodes_wchip_20181218.txt", 
+primed_nodes <- read_delim("0_network_data_preparation/primed_nodes_wchip_20200911.txt", 
                            "\t", escape_double = FALSE, trim_ws = TRUE)
 
 
@@ -147,18 +148,24 @@ h1 <- Heatmap(as.matrix(long[,3:4]), show_row_names = FALSE, gap = unit(2, "mm")
           circlize::colorRamp2(c(-1, 0, 30), c("grey", "blue", "red")))
 
 #                      1         2           3         4           5          6         7          8
-col_long_naive <- c('#00AE0F', '#c9c9c9', '#FF8300', '#C300FF', '#6e6e6e', '#FF0100', '#eedd9a', '#297800')
+# col_long_naive <- c('#00AE0F', '#c9c9c9', '#FF8300', '#C300FF', '#6e6e6e', '#FF0100', '#eedd9a', '#297800')
 
 h2 <- Heatmap(as.matrix(long[,5:6]), show_row_names = FALSE, gap = unit(2, "mm"), cluster_columns = FALSE, 
-              split=long$chromhmm_b_primed, col=col_long_naive, km=km, row_order = od1) +
+              split=long$chromhmm_b_primed, col=col, km=km, row_order = od1) +
   Heatmap(as.matrix(long[,2]), show_row_names = FALSE, gap = unit(2, "mm"), cluster_columns = FALSE, row_order = od1,
           circlize::colorRamp2(c(-1, 0, 30), c("grey", "blue", "red")))
 
 
-pdf("5_network_distance/chrommhmm_hist_all_heatmap_primed_20190105.pdf")
+pdf("5_network_distance/chrommhmm_hist_all_heatmap_primed_20200912.pdf")
 h1+h2
 dev.off()
 
+# Get numbers for long interaction heatmap -------------------------------------
+# table(is.na(long$distance_primed), is.na(long$distance_naive))
+# 
+# table(long$chromhmm_b_primed, long$chromhmm_b_naive)
+# table(long$chromhmm_b_primed)
+# table(long$chromhmm_b_naive)
 
 #order on naive dist -----------------------------------------------------------
 
@@ -205,7 +212,7 @@ nh2 <- Heatmap(as.matrix(n_long[,5:6]), show_row_names = FALSE, gap = unit(2, "m
           circlize::colorRamp2(c(0, 30), c("blue", "red")))
 
 
-pdf("5_network_distance/chrommhmm_hist_all_heatmap_naive_20190105.pdf")
+pdf("5_network_distance/chrommhmm_hist_all_heatmap_naive_20200912.pdf")
 nh1+nh2
 dev.off()
 
@@ -214,7 +221,7 @@ dev.off()
 
 #ChromHMM states by distance heatmap -------------------------------------------
 
-links_nodes_cat_col_coord_deb2b <- readRDS("2_network_make/links_nodes_cat_col_coord_deb2b_20190829.rds")
+links_nodes_cat_col_coord_deb2b <- readRDS("2_network_make/links_nodes_cat_col_coord_deb2b_20200911.rds")
 
 
 allu_df <- data.frame(b_ID=as.character(links_nodes_cat_col_coord_deb2b$links$b_ID), 
@@ -332,7 +339,7 @@ p_n_mat_km <- kmeans(p_n_mat, centers = 5)$cluster
 
 
 
-pdf("5_network_distance/chromhmm_heatmap_without_outliers_p-n_20190105.pdf", width=5.5, height=7)
+pdf("5_network_distance/chromhmm_heatmap_without_outliers_p-n_20200912.pdf", width=5.5, height=7)
 set.seed(2)
 Heatmap(p_n_mat, cluster_columns = FALSE, cluster_rows=FALSE, col = rev(c("#ef8a62", "#f7f7f7", "#67a9cf")), 
         km=5, row_order=row_ord_p$order, gap = unit(2, "mm"))
@@ -342,6 +349,57 @@ p_n_mat[ifelse(is.na(allu_out_int_p_df_t) & is.na(allu_out_int_n_df_t), TRUE, FA
 Heatmap(p_n_mat, cluster_columns = FALSE, cluster_rows=FALSE, col = rev(c("#ef8a62", "#f7f7f7", "#67a9cf")), 
         split=paste0("km", p_n_mat_km), row_order=row_ord_p$order, gap = unit(2, "mm"))
 dev.off()
+
+
+
+
+#make boxplot of distances------------------------------------------------------
+
+plot_dist <- log10(links_nodes_cat_col_coord_deb2b$links$distance)
+
+naive_dist <- data.frame(distance=plot_dist[links_nodes_cat_col_coord_deb2b$links$origin == "naive"])
+naive_dist$range <- "other"
+#remove trans
+naive_dist <- naive_dist[!is.na(naive_dist$distance),]
+
+naive_dist$range[order(naive_dist$distance, decreasing = TRUE)][1:1000] <- "long"
+naive_dist$range[order(naive_dist$distance, decreasing = TRUE)][(round(length(naive_dist$distance)/2)-499):(round(length(naive_dist$distance)/2)+500)] <- "mid"
+naive_dist$range[order(naive_dist$distance, decreasing = FALSE)][1:1000] <- "short"
+
+naive_dist$origin <- "naive"
+
+#remove other
+naive_dist <- naive_dist[naive_dist$range != "other",]
+
+
+primed_dist <- data.frame(distance=plot_dist[links_nodes_cat_col_coord_deb2b$links$origin == "primed"])
+primed_dist$range <- "other"
+#remove trans
+primed_dist <- primed_dist[!is.na(primed_dist$distance),]
+
+primed_dist$range[order(primed_dist$distance, decreasing = TRUE)][1:1000] <- "long"
+primed_dist$range[order(primed_dist$distance, decreasing = TRUE)][(round(length(primed_dist$distance)/2)-499):(round(length(primed_dist$distance)/2)+500)] <- "mid"
+primed_dist$range[order(primed_dist$distance, decreasing = FALSE)][1:1000] <- "short"
+
+primed_dist$origin <- "primed"
+
+#remove other
+primed_dist <- primed_dist[primed_dist$range != "other",]
+
+boxplot_dist  <- rbind(naive_dist, primed_dist)
+
+
+box_p <- ggplot() +
+  # geom_jitter(aes(x = origin, y = distance),data=boxplot_dist,shape = 20,size = 0.5,alpha = 0.1) +
+  # geom_sina(aes(y = distance, x = origin, color=origin),data=boxplot_dist, size=0.5, alpha=0.2)+
+  geom_boxplot(aes(y = distance, x = origin),data=boxplot_dist, outlier.size=0, size = 0.2) +
+  scale_y_continuous(breaks = c(4,5,6,7,8),labels = c('10 kb', '100 kb', '1 Mb', '10 Mb', '100 Mb')) +
+  ylab("log10 interaction distance")
+box_p + facet_grid(~range) + theme_bw()
+  
+ggsave("5_network_distance/distance_boxplot_log10.pdf", device="pdf",
+       width = 9, height = 9, units="cm")
+
 
 
 

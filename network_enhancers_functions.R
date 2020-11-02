@@ -957,3 +957,217 @@ merge_vect <- function(A, B){
 
 
 
+
+
+
+#' Count number of naive, primed or shared enhancers and super enhanceres
+#' 
+#' Categories:
+#'            primed
+#'            naive
+#'            shared (interacting and overlapping in both)
+#'            shared_primed (overlapping but interacting in primed)
+#'            shared_naive (overlapping but interacting in naive)
+#'            
+#' @param naive_list list (names genes) of enhancer names (for each gene a vector of enhancers)
+#' @param primed_list list of enhancer names
+#' 
+#' @return a list containing SE and E data.frames with counts for each gene
+#' 
+count_enhancers <- function(naive_list, primed_list){
+  SE_counts <- list()
+  E_counts <- list()
+  stopifnot(names(naive_list)==names(primed_list))
+  for(g in names(naive_list)){
+    
+    n_SE_select <- grepl("SE", naive_list[[g]])
+    n_E_select <- !n_SE_select
+    n_SE <- unique(naive_list[[g]][n_SE_select])
+    n_E <- unique(naive_list[[g]][n_E_select])
+    
+    p_SE_select <- grepl("SE", primed_list[[g]])
+    p_E_select <- !p_SE_select
+    p_SE <- unique(primed_list[[g]][p_SE_select])
+    p_E <- unique(primed_list[[g]][p_E_select])
+    # Count superenhancers
+    if(rlang::is_empty(p_SE) & rlang::is_empty(n_SE)){
+      SE_counts[[g]] <- c("shared_count"=0, 
+                          "shared_p_count"=0, 
+                          "shared_n_count"=0,
+                          "naive_count"=0,
+                          "primed_count"=0)
+    }else{
+      SE_counts[[g]] <- count_cat(n_SE, p_SE)
+    }
+    # Counts enhancers
+    if(rlang::is_empty(p_E) & rlang::is_empty(n_E)){
+      E_counts[[g]] <- c("shared_count"=0, 
+                         "shared_p_count"=0, 
+                         "shared_n_count"=0,
+                         "naive_count"=0,
+                         "primed_count"=0)
+    }else{
+      E_counts[[g]] <- count_cat(n_E, p_E)
+    }
+  }
+  
+  SE_counts_df <- plyr::ldply(SE_counts, rbind)
+  E_counts_df <- plyr::ldply(E_counts, rbind)
+  
+  return(list(SE=SE_counts_df, E=E_counts_df))
+}
+
+
+#' Count (super)enhancer categories
+#'
+#' Categories:
+#'            primed
+#'            naive
+#'            shared (interacting and overlapping in both)
+#'            shared_primed (overlapping but interacting in primed)
+#'            shared_naive (overlapping but interacting in naive)
+#' @param naive_v vector with naive enhancer names "4_nsp_1551_SE-q109"
+#' @param primed_v vector with primed enhancer names "4_psp_1551_SE-q109"
+#' 
+#' @return a named vector with the 5 categories
+#' 
+count_cat <- function(naive_v, primed_v){
+  
+  # shared count
+  shared <- find_shared(naive_v, primed_v)
+  # stopifnot(sum((shared$v1)*1) == sum((shared$v2)*1))
+  
+  # primed shared primed
+  if(rlang::is_empty(primed_v[!shared$v2])){
+    p_count <- c("pp"=0, "psp"=0)
+  }else{
+    p_vars <-c("pp", "psp")
+    p_count <- sapply(p_vars, function(x) stringr::str_count(primed_v[!shared$v2], x))
+    if(!rlang::is_empty(nrow(p_count))){
+      p_count <- colSums(p_count)
+    }
+  }
+  # naive and shared naive
+  if(rlang::is_empty(naive_v[!shared$v1])){
+    n_count <- c("np"=0, "nsp"=0)
+  }else{
+    n_vars <-c("np", "nsp")
+    n_count <- sapply(n_vars, function(x) stringr::str_count(naive_v[!shared$v1], x))
+    if(!rlang::is_empty(nrow(n_count))){
+      n_count <- colSums(n_count)
+    }
+  }
+  return(c("shared_count"=sum((shared$v1)*1), 
+           "shared_p_count"=unname(p_count["psp"]), 
+           "shared_n_count"=unname(n_count["nsp"]) ,
+           "naive_count"=unname(n_count["np"]) ,
+           "primed_count"=unname(p_count["pp"])))
+}
+
+
+
+
+#' Find shared (overlapping) enhancers 
+#' @param v1 vector 1 with  "4_nsp_1551_SE-q109" strings
+#' @param v2 vector 2 with "4_psp_1551_SE-q109" stromgs
+find_shared <- function(v1, v2){
+  if(all(v1=="NA") | all(v2=="NA")){
+    return(list(v1= rep(FALSE,length(v1)), v2= rep(FALSE,length(v2))))
+  }
+  
+  v1_id <- sapply(strsplit(v1, "-"), "[[", 2)
+  v2_id <- sapply(strsplit(v2, "-"), "[[", 2)
+  
+  v1_l <- v1_id %in% v2_id
+  v2_l <- v2_id %in% v1_id
+  # Ignore NA
+  v1_l <- v1_l & !v1_id == "NA"
+  v2_l <- v2_l & !v2_id == "NA"
+  
+  return(list(v1=v1_l, v2=v2_l))
+}
+
+
+
+
+#' Convert a vector of genes (can be concatenated) into a list
+#' 
+#' @param genes a vector of genes (can be concatenated with ; separator)
+#' @return unique list
+genes2list <- function(genes){
+  g_list <- lapply(genes, function(x) unlist(strsplit(x, ";")))
+  return(unique(unlist(g_list)))
+}
+
+
+
+#' Find if any genes are present in any other list and reclassify them into the mixed
+#' category
+#' 
+#' @param gene_list a named list of genes in categories (one must contain the work mixed)
+#' @return recategorised list of genes in categories
+capture_mixed_genes <- function(gene_list){
+  # Make the combinations of list elements
+  gl <- combn(gene_list, 2 , simplify = FALSE)
+  # Intersect the list elements
+  mixed_genes <- lapply(gl, function(x) intersect(x[[1]], x[[2]]))
+  
+  # combination names
+  # combn(names(gene_list), 2, FUN = paste0, collapse = "", simplify = FALSE)
+  
+  # Remove genes in multiple lists 
+  for(l in seq_along(mixed_genes)){
+    to_remove_1 <- !(gene_list[[names(gl[[l]])[1]]] %in% mixed_genes[[l]])
+    to_remove_2 <- !(gene_list[[names(gl[[l]])[2]]] %in% mixed_genes[[l]])
+    gene_list[[names(gl[[l]])[1]]] <- gene_list[[names(gl[[l]])[1]]][to_remove_1]
+    gene_list[[names(gl[[l]])[2]]] <- gene_list[[names(gl[[l]])[2]]][to_remove_2]
+  }
+  
+  # add removed genes to mixed category
+  mixed_pos <- which(grepl("mixed", names(gene_list)))
+  gene_list[[mixed_pos]] <- unique(c(gene_list[[mixed_pos]], unlist(mixed_genes)))
+  
+  # check all mixed genes removed
+  stopifnot(sum(list_intersect(gene_list)$Freq) == 0)
+  
+  return(gene_list)
+}
+
+
+
+
+#' List intersect 
+#' https://stackoverflow.com/questions/24614391/intersect-all-possible-combinations-of-list-elements
+#' 
+#' @param in_list A named list of vectors to intersect
+#' @return Frequency data.frame
+list_intersect <- function(in_list) {
+  X <- crossprod(table(stack(in_list)))
+  X[lower.tri(X)] <- NA
+  diag(X) <- NA
+  out <- na.omit(data.frame(as.table(X)))
+  out[order(out$ind), ]
+}
+
+
+
+
+
+#' Count number of promoters contacting each super enhancer
+#' 
+#'@param eg_list enhancer gene list
+#'@return a list with counts of promoters for each superenhancer
+count_SE_promoters <- function(eg_list){
+  SE_promoters <- list()
+  
+  for(g in names(naive_list)){
+    #select SE
+    SE_select <- grepl("SE", eg_list[[g]])
+    SE <- unique(eg_list[[g]][SE_select])
+    promoters <- length(unique(unlist(strsplit("test", ";"))))
+    for(e in SE){
+      SE_promoters[[e]] <- sum(SE_promoters[[e]], promoters)
+    }
+  }
+  return(SE_promoters)
+}

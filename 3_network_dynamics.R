@@ -9,7 +9,7 @@ library(tcltk2)
 
 source("network_dynamics_functions.R")
 
-np_summary_deb2b <- readRDS("2_network_make/np_summary_deb2b_20190829.rds")
+np_summary_deb2b <- readRDS("2_network_make/np_summary_deb2b_20200911.rds")
 
 
 ggplot(np_summary_deb2b, aes(x = v, y = e)) +
@@ -27,7 +27,8 @@ ggsave("3_network_dynamics/break_networks_non_merged_ve_deb2b.pdf",
 
 #Subnetwork plots --------------------------------------------------------------
 
-net_all_s <- readRDS("2_network_make/net_all_s_20190829.rds")
+net_all_s <- readRDS("2_network_make/net_all_s_20200911.rds")
+E(net_all_s)$weight <- E(net_all_s)$distance
 all_subgraphs <- decompose.graph(net_all_s)
 
 hindiii_mid_lookup <- readRDS("3_network_dynamics/hindiii_mid_lookup.rds")
@@ -51,7 +52,6 @@ naive_bedpe_755 <- get_bedpe(all_subgraphs[[755]], hindiii_mid_lookup, "primed",
 #HOXD
 primed_bedpe_1591 <- get_bedpe(all_subgraphs[[1591]], hindiii_mid_lookup, "naive", mark_dist = 2^20)
 naive_bedpe_1591 <- get_bedpe(all_subgraphs[[1591]], hindiii_mid_lookup, "primed", mark_dist = 2^20)
-
 
 
 
@@ -139,94 +139,58 @@ axis(side=2,las=2,tcl=.2)
 dev.off()
 
 #coregulation analysis based on chromhmm states --------------------------------
-#initialise progress bar
-pb <- tkProgressBar("Progress bar", "Some information in %",
-                    0, length(all_subgraphs), 0, width=300)
+net_communities_dt <- community_level_dynamics(net_all_s)
+net_communities_dt$v <- net_communities_dt$naive_n-net_communities_dt$primed_n
+net_communities_dt$e <- net_communities_dt$naive_e-net_communities_dt$primed_e
 
+prot_gene_lookup <- readRDS("lookup_files/nodes_all_prot.rds")
+cols <- c("ID", "prot_genes")
+prot_gene_lookup <- prot_gene_lookup[, ..cols]
 
-all_net_list <- list()
-moduty <- list()
-subnet_communities <- list()
-subnet_comm <- list()
-for(sg in seq_along(all_subgraphs)){
-  sub_graph <- all_subgraphs[[sg]]
-  comms <- multilevel.community(as.undirected(sub_graph), weights = E(sub_graph)$weight)
-  
-  moduty[[sg]] <- data.frame(mod=modularity(comms), groups=length(comms), e=length(E(sub_graph)), n=length(V(sub_graph)))
-  
-  #naive or primed subnetwork
-  p_net <- cell_net(all_subgraphs[[sg]], "naive")
-  n_net <- cell_net(all_subgraphs[[sg]], "primed")
-  
-  V(p_net)$btwn.cent <- betweenness(as.undirected(p_net))
-  V(n_net)$btwn.cent <- betweenness(as.undirected(n_net))
-  
-  
-  #add also naive and primed specific counts
-  if(modularity(comms) >= 0.7){ #if modularity is high else just take entire netowork
-    
-    #loop through groups identified, save nodes within and give unique name to subnetwork
-    for(c in seq_along(comms)){
-      
-      p_del <- delete.vertices(p_net, !(V(p_net)$name %in% comms[[c]]))
-      n_del <- delete.vertices(n_net, !(V(n_net)$name %in% comms[[c]]))
-      
-      #include Robustness measure
-      
-      subnet_communities[[paste(sg, c, sep="_")]] <- data.frame(nodes=paste(comms[[c]], collapse = ";"),
-                                                                naive_n=vcount(n_del),
-                                                                primed_n=vcount(p_del),
-                                                                naive_e=ecount(n_del),
-                                                                primed_e=ecount(p_del),
-                                                                modul=modularity(comms),
-                                                                p_btwn_cent=paste(V(p_del)$btwn.cent, collapse = ";"),
-                                                                n_btwn_cent=paste(V(n_del)$btwn.cent, collapse = ";"))
-      #simple list for asigning in network
-      subnet_comm[[paste(sg, c, sep="_")]] <- comms[[c]]
-      
-      
-    }
-  }else{
-    subnet_communities[[as.character(sg)]] <- data.frame(nodes=paste(V(all_subgraphs[[sg]])$name, collapse = ";"),
-                                                         naive_n=vcount(n_net),
-                                                         primed_n=vcount(p_net),
-                                                         naive_e=ecount(n_net),
-                                                         primed_e=ecount(p_net),
-                                                         modul=modularity(comms),
-                                                         p_btwn_cent=paste(V(p_net)$btwn.cent, collapse = ";"),
-                                                         n_btwn_cent=paste(V(n_net)$btwn.cent, collapse = ";"))
-    
-    subnet_comm[[as.character(sg)]] <- V(all_subgraphs[[sg]])$name
-    
-  }
-  #progress bar
-  info <- sprintf("%d%% done", (round(sg/length(all_subgraphs)*100)))
-  setTkProgressBar(pb, sg, sprintf("Outer loop (%s)", info), info)
-  
-}
+net_nodes <- lapply(net_communities_dt$nodes, function(x) unlist(strsplit(x, ";")))
+net_genes <- lapply(net_nodes, function(x) paste(unique(na.omit(prot_gene_lookup[x])$prot_genes), collapse = ";"))
+net_communities_dt$prot_genes <- unlist(net_genes)
 
-net_modularity <- plyr::ldply(moduty, rbind)
-net_modularity$.id <- as.numeric(rownames(net_modularity))
-
-net_communities <- plyr::ldply(subnet_communities, rbind)
-
-#close progress bar
-close(pb)
-
-
-#remove nodes with only one central node (low robustness)
-table(cut(table(as.numeric(unlist(strsplit(as.character(net_communities$p_btwn_cent), ";")))), seq(0,500, 10)))
-
-net_communities$p_btwn_cent_cnt <- sapply(strsplit(as.character(net_communities$p_btwn_cent), ";"), function(x) sum((as.numeric(x) > 0)*1))
-net_communities$n_btwn_cent_cnt <- sapply(strsplit(as.character(net_communities$n_btwn_cent), ";"), function(x) sum((as.numeric(x) > 0)*1))
-
-#remove ones with btwn.cent 0 and 1
-
-net_communities_sub <- net_communities[net_communities$p_btwn_cent_cnt > 1 & net_communities$n_btwn_cent_cnt > 1,]
-net_communities_dt <- as.data.table(net_communities_sub) #lookup nodes
-setkey(net_communities_dt, ".id")
+ggplot(net_communities_dt, aes(x = v, y = e)) +
+  geom_point(size=1, pch=21, fill="grey", alpha=0.5) +
+  geom_point(data=net_communities_dt[net_communities_dt$.id %in% c("2609_3", "2387"),], fill="red", size=2, pch=21) +
+  xlab("Vertices (Naive-primed)") +
+  ylab("Edges (Naive-primed)") +
+  theme_pubr() +
+  geom_hline(aes(yintercept = 0)) +
+  geom_vline(aes(xintercept = 0)) +
+  scale_x_continuous(breaks = scales::pretty_breaks(n = 5)) +
+  scale_y_continuous(breaks = scales::pretty_breaks(n = 5))
+ggsave("3_network_dynamics/break_networks_non_merged_ve_deb2b_community.pdf", 
+       device="pdf", width = 10, height = 10, units="cm")
 
 #Used in TAD community overlap analysis
 saveRDS(net_communities_dt, "3_network_dynamics/net_communities_dt.rds")
 
+# Bed files for pile-up plots --------------------------------------------------
+
+#' Coarsen coordinates 
+#' 
+#' @param coordinate vector with start or end coordinate
+#' @param resolution in bp
+coarsen_coordinates <- function(coordinates, resolution){
+  coord <- sapply(coordinates, function(c) as.integer(as.integer(c)/resolution)*resolution)
+  return(coord)
+}
+
+c_cols <- c("start_1", "end_1", "start_2", "end_2")
+
+primed_bedpe_2301_25k <- primed_bedpe_2301
+primed_bedpe_2301_25k[c_cols] <- lapply(primed_bedpe_2301_25k[c_cols], coarsen_coordinates, resolution=25000)
+primed_bedpe_2301_25k[c("chrom_1", "chrom_2")] <- lapply(primed_bedpe_2301_25k[c("chrom_1", "chrom_2")], function(x) gsub("chr", "", x))
+# Export 6 column bed for pile-up plots
+write.table(primed_bedpe_2301_25k[1:6], "3_network_dynamics/primed_2301_25k.bed", quote = FALSE, sep = "\t", row.names = FALSE,
+            col.names = FALSE)
+
+naive_bedpe_2301_25k <- naive_bedpe_2301
+naive_bedpe_2301_25k[c_cols] <- lapply(naive_bedpe_2301_25k[c_cols], coarsen_coordinates, resolution=25000)
+naive_bedpe_2301_25k[c("chrom_1", "chrom_2")] <- lapply(naive_bedpe_2301_25k[c("chrom_1", "chrom_2")], function(x) gsub("chr", "", x))
+# Export 6 column bed for pile-up plots
+write.table(naive_bedpe_2301_25k[1:6], "3_network_dynamics/naive_2301_25k.bed", quote = FALSE, sep = "\t", row.names = FALSE,
+            col.names = FALSE)
 

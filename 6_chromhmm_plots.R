@@ -7,19 +7,34 @@ library(Gmisc)
 library(pheatmap)
 library(ggpubr)
 library(GenomicRanges)
+library(rtracklayer)
 
 source("network_chromhmm_functions.R")
 
 #Plot emmission state heatmap (didn't output on cluster) -----------------------
 
 plot_emmisions("6_chromhmm_plots/emissions_16.txt",
-               out_path="6_chromhmm_plots/emmisions_16.pdf")
+               out_path="6_chromhmm_plots/emmisions_16.pdf",
+               c("state (Emission order)", "H3K9me3", "H3K4me1_igg", "T2016_input",	"Ji_input",	"H3K27ac", 
+                 "T2014_input",	"H3K4me3", "H3K4me1", "H3K27me3"))
 
+
+plot_state_frequency("6_chromhmm_plots/naive_16_segments.bed", 
+                     c("Background", "Background", "Heter", "Background", "Heter", "Mixed", "Active", 
+                         "Active", "Active", "Active", "Active", "Active", "Poised enhancer", "Mixed", 
+                         "Bivalent", "Polycomb Repressed"),
+                     "6_chromhmm_plots/naive_segments_frequency.pdf")
+
+plot_state_frequency("6_chromhmm_plots/primed_16_segments.bed", 
+                     c("Background", "Background", "Heter", "Background", "Heter", "Mixed", "Active", 
+                       "Active", "Active", "Active", "Active", "Active", "Poised enhancer", "Mixed", 
+                       "Bivalent", "Polycomb Repressed"),
+                     "6_chromhmm_plots/primed_segments_frequency.pdf")
 
 
 #Make transition plots ---------------------------------------------------------
 
-links_nodes_cat_col_coord_deb2b <- readRDS("2_network_make/links_nodes_cat_col_coord_deb2b_20190829.rds")
+links_nodes_cat_col_coord_deb2b <- readRDS("2_network_make/links_nodes_cat_col_coord_deb2b_20200911.rds")
 nodes_all <- links_nodes_cat_col_coord_deb2b$nodes
 links_all <- links_nodes_cat_col_coord_deb2b$links
 
@@ -60,7 +75,7 @@ sankey_act_nodes$chromhmm_naive <- gsub(" ", "_", sankey_act_nodes$chromhmm_naiv
 #Not all used in publication ---------------------------------------------------
 
 state_transition_plot(sankey_act_nodes[c("chromhmm_naive", "chromhmm_primed")],
-                      "6_chromhmm_plots/naive_active_to_primed_interaction_20190114.pdf",
+                      "6_chromhmm_plots/naive_active_to_primed_interaction_20200911.pdf",
                       "of_subset", state2plot = c("Active_naive", "Active_primed", "Active_shared"), 
                       lvls = c("Active_naive", "Active_primed", "Active_shared",
                                "Background_naive", "Background_primed", "Background_shared",
@@ -108,57 +123,57 @@ state_transition_plot(sankey_act_nodes[c("chromhmm_naive", "chromhmm_primed")],
                                            Unclassified_naive="#6e6e6e", Unclassified_primed="#6e6e6e", Unclassified_shared="#6e6e6e"))
 
 state_transition_plot(sankey_act_nodes_full[c("chromhmm_naive", "chromhmm_primed")],
-                      "6_chromhmm_plots/naive_all_to_primed_bi_poly_20190119.pdf",
+                      "6_chromhmm_plots/naive_all_to_primed_bi_poly_20200911.pdf",
                       "of_subset", state2plot=c("Bivalent","Polycomb Repressed"), col_filter="right")
 
 state_transition_plot(sankey_act_nodes_full[c("chromhmm_naive", "chromhmm_primed")],
                       percentage = "of_subset", state2plot = "Active", col_filter = "left")
 
 state_transition_plot(sankey_act_nodes_full[c("chromhmm_naive", "chromhmm_primed")],
-                      "6_chromhmm_plots/naive_active_to_primed_20190107.pdf",
+                      "6_chromhmm_plots/naive_active_to_primed_20200911.pdf",
                       "of_subset", "Active")
 
 state_transition_plot(sankey_act_nodes_full[c("chromhmm_naive", "chromhmm_primed")],
-                      "6_chromhmm_plots/naive_background_to_primed_20190107.pdf",
+                      "6_chromhmm_plots/naive_background_to_primed_20200911.pdf",
                       "of_subset", "Background")
 
 state_transition_plot(sankey_act_nodes_full[c("chromhmm_naive", "chromhmm_primed")],
-                      "6_chromhmm_plots/naive_Bivalent_to_primed_20190107.pdf",
+                      "6_chromhmm_plots/naive_Bivalent_to_primed_20200911.pdf",
                       "of_subset", "Bivalent")
 
 
 state_transition_plot(sankey_act_nodes_full[c("chromhmm_naive", "chromhmm_primed")],
-                      "6_chromhmm_plots/naive_Heterochromatin_Repressed_to_primed_20190107.pdf",
+                      "6_chromhmm_plots/naive_Heterochromatin_Repressed_to_primed_20200911.pdf",
                       "of_subset", "Heterochromatin Repressed")
 
 state_transition_plot(sankey_act_nodes_full[c("chromhmm_naive", "chromhmm_primed")],
-                      "6_chromhmm_plots/naive_H3K4me1_to_primed_20190107.pdf",
+                      "6_chromhmm_plots/naive_H3K4me1_to_primed_20200911.pdf",
                       "of_subset", "H3K4me1")
 
 
 state_transition_plot(sankey_act_nodes_full[c("chromhmm_naive", "chromhmm_primed")],
-                      "6_chromhmm_plots/naive_Mixed_to_primed_20190107.pdf",
+                      "6_chromhmm_plots/naive_Mixed_to_primed_20200911.pdf",
                       "of_subset", "Mixed")
 
 state_transition_plot(sankey_act_nodes_full[c("chromhmm_naive", "chromhmm_primed")],
-                      "6_chromhmm_plots/naive_Unknown_to_primed_20190107.pdf",
+                      "6_chromhmm_plots/naive_Unknown_to_primed_20200911.pdf",
                       "of_subset", "Unclassified")
 
 state_transition_plot(sankey_act_nodes_full[c("chromhmm_naive", "chromhmm_primed")],
-                      "6_chromhmm_plots/naive_Polycomb_Repressed_to_primed_20190107.pdf",
+                      "6_chromhmm_plots/naive_Polycomb_Repressed_to_primed_20200911.pdf",
                       "of_subset", "Polycomb Repressed")
 
 
 #Genome wide chromhmm numbers --------------------------------------------------
 
-naive_nodes <- read_delim("0_network_data_preparation/naive_nodes_wchip_20181218.txt", 
+naive_nodes <- read_delim("0_network_data_preparation/naive_nodes_wchip_20200911.txt", 
                           "\t", escape_double = FALSE, trim_ws = TRUE)
 
-primed_nodes <- read_delim("0_network_data_preparation/primed_nodes_wchip_20181218.txt", 
+primed_nodes <- read_delim("0_network_data_preparation/primed_nodes_wchip_20200911.txt", 
                            "\t", escape_double = FALSE, trim_ws = TRUE)
 
 #remove mt
-pdf("6_chromhmm_plots/chromhmm_states_heatmap_20190107.pdf", height = 6, width = 6)
+pdf("6_chromhmm_plots/chromhmm_states_heatmap_20200911.pdf", height = 6, width = 6)
 pheatmap::pheatmap(log2(table(naive_nodes$chromhmm[!grepl("chrMT", naive_nodes$ID)], 
                               primed_nodes$chromhmm[!grepl("chrMT", primed_nodes$ID)])+1),
                    cluster_rows = F,
@@ -184,7 +199,7 @@ naive_nodes_sub$chromhmm[!(naive_nodes_sub$ID %in% interacting_nodes_naive)] <- 
 primed_nodes_sub$chromhmm[!(primed_nodes_sub$ID %in% interacting_nodes_primed)] <- NA
 
 
-pdf("6_chromhmm_plots/chromhmm_states_heatmap_interacting_20190107.pdf", 
+pdf("6_chromhmm_plots/chromhmm_states_heatmap_interacting_20200911.pdf", 
     height = 6, width = 6)
 pheatmap::pheatmap(log2(table(naive_nodes_sub$chromhmm, 
                               primed_nodes_sub$chromhmm, useNA = "ifany")+1),
@@ -206,13 +221,13 @@ off_diag_cnts <- rbind(data.frame(count=unname(naive_sum), state=names(naive_sum
                                   type=rep("primed", length(primed_sum))))
 
 ggplot(off_diag_cnts[!is.na(off_diag_cnts$state),], aes(x=state, y=count, fill=type))+
-  geom_bar(stat = "identity", position = "dodge", color = "black")+
+  geom_bar(stat = "identity", position = "dodge", color = "black") +
   theme_pubr() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-  scale_y_continuous(expand = c(0, 0), limits = c(0,30000)) + 
+  scale_y_continuous(expand = c(0, 0), limits = c(0,40000)) + 
   ylab("HindIII frequency") +
   xlab("ChromHMM states of interacting fragments")
-ggsave("6_chromhmm_plots/hindiii_frequency_of_interacting_fragments_chromhmm_state_20190107.pdf", device="pdf",
+ggsave("6_chromhmm_plots/hindiii_frequency_of_interacting_fragments_chromhmm_state_20200911.pdf", device="pdf",
        width = 8, height = 12, units="cm")
 
 
@@ -254,10 +269,10 @@ ggplot(np_cnts_melt, aes(x = Var1, y = value, fill = variable)) +
   geom_bar(stat = "identity", position = "dodge", color = "black") +
   theme_pubr() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-  scale_y_continuous(expand = c(0, 0)) + 
+  scale_y_continuous(expand = c(0, 0),  limits = c(0,80000)) + 
   ylab("Interaction frequency") +
   xlab("ChromHMM states of interacting fragments")
-ggsave("6_chromhmm_plots/interaction_frequency_of_each_chromhmm_state_20190107.pdf", device="pdf",
+ggsave("6_chromhmm_plots/interaction_frequency_of_each_chromhmm_state_20200911.pdf", device="pdf",
        width = 8, height = 12, units="cm")
 
 
@@ -277,23 +292,15 @@ naive_16_seg_chr <- diffloop::addchr(naive_16_seg_other)
 mixed_seg <- findOverlaps(mixed_hindiii, naive_16_seg_chr)
 
 
-collapse_states <- c('E1' = 'Active', 'E2'= 'Active',
-                     'E3'= 'Active', 'E5'= 'Active', 'E6'= 'Active', 'E7'= 'Bivalent',
-                     'E4'= 'Active',
-                     'E8'= 'Polycomb Repressed', 'E9'= 'Bivalent',
-                     'E10'= 'H3K4me1',
-                     'E11'= 'H3K4me1',
-                     'E12'= 'Unclassified', 'E13'= 'Heterochromatin Repressed',
-                     'E14'= 'Background', 'E15'= 'Heterochromatin Repressed', 'E16'= 'Background')
-
-collapse_states <- c('E1' = 'Active', 'E2'= 'Active',
-                     'E3'= 'Active', 'E5'= 'Active', 'E6'= 'Active', 'E7'= 'Bivalent',
-                     'E4'= 'Active',
-                     'E8'= 'K27', 'E9'= 'Bivalent',
-                     'E10'= 'Active',
-                     'E11'= 'Active',
-                     'E12'= 'Unclassified', 'E13'= 'Heterochromatin',
-                     'E14'= '', 'E15'= 'Heterochromatin', 'E16'= '')
+collapse_states <- c('E1' = 'Background', 'E2' = 'Background',
+                     'E4' =  'Background',
+                     'E3' = 'Heterochromatin Repressed', 'E5' = 'Heterochromatin Repressed', 
+                     'E6' = 'Unclassified', 
+                     'E7' =  'Active', 'E8' = 'Active', 'E9' = 'Active', 'E10' = 'Active',
+                     'E11' = 'Active', 'E12' = 'Active', 
+                     'E13' = 'H3K4me1',
+                     'E14' = 'Unclassified', 
+                     'E15' = 'Bivalent', 'E16' = 'Polycomb Repressed')
 
 mcols(naive_16_seg_chr)$state <- sapply(naive_16_seg_chr$name, function(x) unname(collapse_states[x]))
 
@@ -313,14 +320,9 @@ mixed_plot_df <- data.frame(rep("Mixed", nrow(mixed_agg )),
 
 
 
-state_transition_plot(mixed_plot_df, lvls = c("Mixed",names(table(mixed_plot_df$mixed_agg.x))),
-                      out_path = "6_chromhmm_plots/naive_mixed_decomposed_20190924.pdf",
-                      state2plot = "Mixed", percentage = "of_total", col_filter = "other")
+m_counts <- state_transition_plot(mixed_plot_df, lvls = c("Mixed",names(table(mixed_plot_df$mixed_agg.x))),
+                      out_path = "6_chromhmm_plots/naive_mixed_decomposed_20200911.pdf",
+                      state2plot = "Mixed", percentage = "of_total", col_filter = "left", low_counts = 5)
 
 
-
-
-
-
-
-
+write.csv(m_counts, "6_chromhmm_plots/mixed_counts.csv", row.names = FALSE)
