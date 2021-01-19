@@ -1,4 +1,5 @@
-## Network analysis of promoter interactions reveals the hierarchical differences in genome organisation between human pluripotent states
+## Widespread reorganisation of pluripotent factor binding and gene regulatory interactions between human pluripotent states
+
 
 ___
 
@@ -6,7 +7,7 @@ ___
 **This repository contains scripts to reproduce the analysis and figures in Chovanec P. & Collier AJ. *et al*.**
 
 Preprint:
-**Network analysis of promoter interactions reveals the hierarchical differences in genome organisation between human pluripotent states.** Peter Chovanec, Amanda J. Collier, Christel Krueger, Csilla Várnai, Stefan Schoenfelder, Anne Corcoran, Peter J. Rugg-Gunn
+**Network analysis of promoter interactions reveals the hierarchical differences in genome organisation between human pluripotent states.** Peter Chovanec, Amanda J. Collier, Christel Krueger, Csilla Várnai, Claudia I. Semprich, Stefan Schoenfelder, Anne Corcoran, Peter J. Rugg-Gunn
 bioRxiv 2019.12.13.875286; doi: https://doi.org/10.1101/2019.12.13.875286 
 
 ## Installing dependencies
