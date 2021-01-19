@@ -1,3 +1,5 @@
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.4451360.svg)](https://doi.org/10.5281/zenodo.4451360)
+
 ## Widespread reorganisation of pluripotent factor binding and gene regulatory interactions between human pluripotent states
 
 
